@@ -49,6 +49,13 @@ export async function syncMatches(force = false): Promise<void> {
         .onConflictDoUpdate({
           target: matches.id,
           set: {
+            stage: apiMatch.stage,
+            groupName: apiMatch.group,
+            homeTeamName: apiMatch.homeTeam.name,
+            awayTeamName: apiMatch.awayTeam.name,
+            homeTeamCrest: apiMatch.homeTeam.crest,
+            awayTeamCrest: apiMatch.awayTeam.crest,
+            utcDate: new Date(apiMatch.utcDate),
             status: status,
             homeScore: homeScore,
             awayScore: awayScore,
@@ -58,15 +65,14 @@ export async function syncMatches(force = false): Promise<void> {
 
       // If the match is finished, check if we need to award prediction points
       if (status === "FINISHED" && homeScore !== null && awayScore !== null) {
-        // Find all predictions for this match that haven't been awarded points yet
+        // Find all predictions for this match (if force, recalculate everything; otherwise, only uncalculated ones)
+        const whereClause = force
+          ? eq(predictions.matchId, matchId)
+          : and(eq(predictions.matchId, matchId), isNull(predictions.pointsAwarded));
+
         const uncalculatedPredictions = await db.select()
           .from(predictions)
-          .where(
-            and(
-              eq(predictions.matchId, matchId),
-              isNull(predictions.pointsAwarded)
-            )
-          );
+          .where(whereClause);
 
         for (const pred of uncalculatedPredictions) {
           const points = computePoints(pred.predictedHome, pred.predictedAway, homeScore, awayScore);

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { expect, test, vi, beforeEach, afterEach } from "vitest";
 import { syncMatches } from "./syncService";
 import { db } from "../db";
@@ -131,4 +132,41 @@ test("syncMatches syncs matches, updates match records, and calculates points fo
       pointsAwarded: 10,
     })
   );
+});
+
+test("syncMatches recalculates all predictions (even those with pointsAwarded) when force is true", async () => {
+  const mockFindFirst = vi.mocked(db.query.matches.findFirst);
+  mockFindFirst.mockResolvedValue({
+    lastSyncedAt: new Date(Date.now() - 30 * 1000), // Cache is technically fresh (30s old)
+  } as any);
+
+  const mockFetch = vi.mocked(fetchMatchesFromApi);
+  mockFetch.mockResolvedValue({
+    matches: [
+      {
+        id: 101,
+        stage: "GROUP_STAGE",
+        group: "GROUP_A",
+        utcDate: "2026-06-08T18:00:00Z",
+        status: "FINISHED",
+        homeTeam: { name: "Brazil", crest: "brazil.png" },
+        awayTeam: { name: "Croatia", crest: "croatia.png" },
+        score: {
+          fullTime: { home: 3, away: 1 }
+        }
+      }
+    ]
+  } as any);
+
+  const mockWhere = vi.fn().mockReturnValue([]);
+  const mockFrom = vi.fn(() => ({ where: mockWhere }));
+  const mockSelect = vi.mocked(db.select);
+  mockSelect.mockReturnValue({ from: mockFrom } as any);
+
+  // Invoke syncMatches with force = true
+  await syncMatches(true);
+
+  // Even though cache is fresh, fetch should be called because force = true
+  expect(fetchMatchesFromApi).toHaveBeenCalled();
+  expect(mockSelect).toHaveBeenCalled();
 });

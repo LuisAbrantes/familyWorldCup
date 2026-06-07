@@ -38,8 +38,9 @@ export async function fetchMatchesFromApi(): Promise<{ matches: ApiMatch[] }> {
         "X-Auth-Token": apiKey,
       },
     });
-  } catch (err: any) {
-    throw new Error(`Failed to fetch match data: ${err?.message || "Unknown network error"}`);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown network error";
+    throw new Error(`Failed to fetch match data: ${message}`);
   }
 
   // Extract rate-limit headers for auditing
