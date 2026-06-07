@@ -1,28 +1,31 @@
 # Roadmap de Features — Bolão da Família Copa 2026
 
-## Estado Atual (MVP Completo ✅)
+## Estado Atual (Funcionalidades Concluídas ✅)
 
-O MVP está funcional com:
+O Bolão está 100% funcional com:
 - Autenticação via Clerk (login/logout)
-- Banco de dados Supabase + Drizzle ORM
-- Sincronização automática de 104 jogos (football-data.org)
-- Motor de pontuação (10/7/5/0 pts)
-- API de palpites com trava por horário de início
-- Ranking em tempo real
-- Painel admin: forçar sincronização
-- UI verde-escuro/dourado responsiva
+- Banco de dados Supabase + Drizzle ORM (Pool de conexões otimizado `{ max: 1 }` para plano gratuito)
+- Sincronização automática e resiliente de 104 jogos da Copa 2026 (football-data.org)
+- Motor de pontuação robusto (10 / 7 / 5 / 0 pontos)
+- API de palpites com trava por horário de início de jogo
+- Ranking em tempo real com perfis de histórico de palpites (revelando palpites de outros somente em jogos já iniciados ou onde o visualizador já deu seu próprio palpite)
+- Painel Admin com sub-abas para:
+  - **Sincronização**: Forçar atualização manual de dados
+  - **Participantes**: Visualizar estatísticas de participação e remover usuários de forma segura (cascade deletes)
+  - **Estatísticas**: Análise detalhada das médias de pontuação, palpites por partida e distribuição de pontos
+- UI verde-escuro e dourado elegante e responsiva com micro-interações
 
 ---
 
-## Próximas Features Planejadas
+## Roadmap de Features Futuras
 
-### 🟡 Prioridade Alta
+### 🟡 Features Recém-Implementadas
 
 | # | Feature | Documento | Status |
 |---|---|---|---|
-| 1 | **Palpites Sociais** — ver palpites dos outros após dar o seu | [feature-social-palpites.md](./feature-social-palpites.md) | 📝 Documentado |
-| 2 | **Admin: Gerenciar Participantes** — ver, remover participantes | [feature-admin-participantes-stats.md](./feature-admin-participantes-stats.md) | 📝 Documentado |
-| 3 | **Admin: Dashboard de Estatísticas** — métricas do bolão | [feature-admin-participantes-stats.md](./feature-admin-participantes-stats.md) | 📝 Documentado |
+| 1 | **Palpites Sociais** — ver palpites dos outros após dar o seu | [feature-social-palpites.md](./feature-social-palpites.md) | ✅ Concluído |
+| 2 | **Admin: Gerenciar Participantes** — ver, remover participantes | [feature-admin-participantes-stats.md](./feature-admin-participantes-stats.md) | ✅ Concluído |
+| 3 | **Admin: Dashboard de Estatísticas** — métricas do bolão | [feature-admin-participantes-stats.md](./feature-admin-participantes-stats.md) | ✅ Concluído |
 
 ### 🔵 Prioridade Média (Ideias Futuras)
 
