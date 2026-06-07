@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^7.4.3",
+    "@supabase/ssr": "^0.10.3",
+    "@supabase/supabase-js": "^2.107.0",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.2",
     "lucide-react": "^1.17.0",
