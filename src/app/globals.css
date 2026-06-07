@@ -1,8 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --background: #06080e;
-  --foreground: #f4f4f5;
+  --bg-primary: #0a1a0f;
+  --bg-secondary: #0d2214;
+  --bg-card: #0f2a18;
+  --bg-card-hover: #133220;
+  --border-color: #1a3d24;
+  --border-light: #1f4a2c;
+  --text-primary: #e8e8e8;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+  --accent-gold: #d4a017;
+  --accent-gold-light: #e6b422;
+  --accent-green: #2d8a4e;
+  --accent-green-light: #3da562;
+  --background: #0a1a0f;
+  --foreground: #e8e8e8;
 }
 
 @theme inline {
@@ -13,34 +26,34 @@
 }
 
 body {
-  background-color: var(--background);
+  background-color: var(--bg-primary);
   color: var(--foreground);
 }
 
-/* Custom modern scrollbar styles */
+/* Custom scrollbar matching the green theme */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #090d16;
+  background: #071209;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1f2937;
+  background: #1a3d24;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #10b981;
+  background: #2d8a4e;
 }
 
 /* Micro-animations */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -48,6 +61,107 @@ body {
   }
 }
 
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse-gold {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
 .animate-fadeIn {
-  animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(212, 160, 23, 0.08), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Gold text gradient for headings */
+.text-gold-gradient {
+  background: linear-gradient(135deg, #d4a017, #e6b422, #f0c840);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Card glass effect */
+.card-glass {
+  background: rgba(15, 42, 24, 0.6);
+  border: 1px solid rgba(26, 61, 36, 0.8);
+  backdrop-filter: blur(12px);
+}
+
+.card-glass:hover {
+  border-color: rgba(45, 138, 78, 0.4);
+}
+
+/* Stat card style */
+.stat-card {
+  background: rgba(13, 34, 20, 0.5);
+  border: 1px solid rgba(26, 61, 36, 0.9);
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  border-color: rgba(45, 138, 78, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* Match card */
+.match-card {
+  background: rgba(13, 34, 20, 0.4);
+  border: 1px solid rgba(26, 61, 36, 0.7);
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+
+.match-card:hover {
+  border-color: rgba(45, 138, 78, 0.5);
+  background: rgba(15, 42, 24, 0.6);
+}
+
+/* Nav active state */
+.nav-active {
+  color: #d4a017;
+  position: relative;
+}
+
+.nav-active::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 2px;
+  background: #d4a017;
+  border-radius: 1px;
+}
+
+/* Selection */
+::selection {
+  background-color: rgba(212, 160, 23, 0.3);
+  color: #fff;
 }
