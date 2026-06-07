@@ -170,3 +170,44 @@ test("syncMatches recalculates all predictions (even those with pointsAwarded) w
   expect(fetchMatchesFromApi).toHaveBeenCalled();
   expect(mockSelect).toHaveBeenCalled();
 });
+
+test("syncMatches uses 'A definir' fallback if homeTeam.name or awayTeam.name is missing/null", async () => {
+  const mockFindFirst = vi.mocked(db.query.matches.findFirst);
+  mockFindFirst.mockResolvedValue(undefined as any);
+
+  const mockFetch = vi.mocked(fetchMatchesFromApi);
+  mockFetch.mockResolvedValue({
+    matches: [
+      {
+        id: 102,
+        stage: "LAST_32",
+        group: null,
+        utcDate: "2026-06-28T19:00:00Z",
+        status: "TIMED",
+        homeTeam: { name: null, crest: null },
+        awayTeam: { name: undefined, crest: null },
+        score: {
+          fullTime: { home: null, away: null }
+        }
+      }
+    ]
+  } as any);
+
+  const mockValues = vi.fn(() => ({
+    onConflictDoUpdate: vi.fn(),
+  }));
+  const mockInsert = vi.mocked(db.insert);
+  mockInsert.mockReturnValue({
+    values: mockValues,
+  } as any);
+
+  await syncMatches();
+
+  expect(mockInsert).toHaveBeenCalled();
+  expect(mockValues).toHaveBeenCalledWith(
+    expect.objectContaining({
+      homeTeamName: "A definir",
+      awayTeamName: "A definir",
+    })
+  );
+});

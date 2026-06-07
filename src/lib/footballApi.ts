@@ -39,6 +39,7 @@ export async function fetchMatchesFromApi(): Promise<{ matches: ApiMatch[] }> {
       },
     });
   } catch (err) {
+    console.error("[Football API Client] Fetch error details:", err);
     const message = err instanceof Error ? err.message : "Unknown network error";
     throw new Error(`Failed to fetch match data: ${message}`);
   }

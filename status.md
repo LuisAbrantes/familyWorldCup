@@ -64,3 +64,8 @@ O arquivo local `.env.local` está configurado com as chaves funcionais:
    - O projeto está pronto para ser hospedado (ex: Vercel). Basta configurar as mesmas variáveis de ambiente de `.env.local` na plataforma de hospedagem.
 3. **Monitoramento e Auditoria**:
    - Acompanhar os logs de sincronização durante as rodadas para auditar o motor de pontuação em tempo real.
+
+---
+
+## 🐛 Correções de Bugs Recentes
+- **Nomes de times vazios em fases eliminatórias**: Resolvida a falha de constraint `NOT NULL` de banco de dados na inserção e atualização de partidas de fases eliminatórias (onde os times não estão definidos e vêm como `null` da API do `football-data.org`). Implementado fallback para `"A definir"` no arquivo `src/lib/syncService.ts`.
