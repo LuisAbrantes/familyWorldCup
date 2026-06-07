@@ -34,10 +34,15 @@ O desenvolvimento das funcionalidades do MVP foi **concluído** e o projeto est�
 7. **Interface Gráfica (`src/app/page.tsx`)**:
    - Dashboard completo contendo quatro abas:
      - **Visão Geral**: Regras de pontuação, status do usuário e próximos jogos.
-     - **Jogos**: Grid de partidas com inputs de placar (+ e -) e feedback de salvamento/bloqueio.
+     - **Jogos**: Grid de partidas com inputs de placar (+ e -), feedback de salvamento/bloqueio e a seção **Palpites da Família** colapsável abaixo de cada partida.
      - **Classificação**: Tabela de ranking com medalhas para o top 3 e destaque para o usuário logado.
-     - **Painel Admin**: Botão para forçar a sincronização de dados diretamente do football-data.org.
-8. **Configuração de Testes (`vitest.config.ts`)**:
+     - **Painel Admin**: Sub-navegação com três abas:
+       - **Sincronização**: Forçar a sincronização de dados diretamente do football-data.org.
+       - **Participantes**: Tabela com total de palpites e pontos de cada usuário, com ação de remoção segura (bloqueado para si mesmo).
+       - **Estatísticas**: Métricas globais de palpites, cobertura/média de cada participante, distribuição de pontuações (Exato/Saldo/Resultado/Erros) e jogos mais/menos palpitados.
+8. **Palpites Sociais com Spoiler Protection**:
+   - Lógica de visibilidade implementada no backend (`GET /api/matches`) e consumida no frontend para ocultar palpites de familiares em jogos futuros até que o usuário registre o seu próprio palpite para aquela partida.
+9. **Configuração de Testes (`vitest.config.ts`)**:
    - Suporte ao path alias `@/` em arquivos de testes unitários.
 
 ---
@@ -52,7 +57,7 @@ O arquivo local `.env.local` está configurado com as chaves funcionais:
 ---
 
 ## 🧪 Status de Testes e Builds
-- **Testes Unitários**: 15 testes passando com sucesso (`npm test`).
+- **Testes Unitários**: 24 testes passando com sucesso (`npm test`).
 - **Build de Produção**: Next.js compila e gera o bundle final sem nenhum erro (`npm run build`).
 
 ---
@@ -69,3 +74,4 @@ O arquivo local `.env.local` está configurado com as chaves funcionais:
 
 ## 🐛 Correções de Bugs Recentes
 - **Nomes de times vazios em fases eliminatórias**: Resolvida a falha de constraint `NOT NULL` de banco de dados na inserção e atualização de partidas de fases eliminatórias (onde os times não estão definidos e vêm como `null` da API do `football-data.org`). Implementado fallback para `"A definir"` no arquivo `src/lib/syncService.ts`.
+- **Highlighter Turbopack Panic**: Substituídos os divisores de comentários unicode `═` por ASCII padrão `-` para contornar um bug de caractere multi-byte no compilador de Next.js Turbopack.
