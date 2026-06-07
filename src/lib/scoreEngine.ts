@@ -3,7 +3,7 @@ export const POINTS_CONFIG = {
   RESULT_AND_GD: 7,
   RESULT_ONLY: 5,
   NO_POINTS: 0,
-};
+} as const;
 
 /**
  * Calculates prediction points based on predicted vs actual scores.
