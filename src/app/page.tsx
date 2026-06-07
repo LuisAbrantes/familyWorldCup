@@ -19,6 +19,8 @@ import {
   CheckCircle,
   ChevronRight,
   LogOut,
+  Users,
+  BarChart3,
 } from "lucide-react";
 
 interface Match {
@@ -73,6 +75,7 @@ export default function Home() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [matches, setMatches] = useState<Match[]>([]);
   const [predictions, setPredictions] = useState<Record<number, Prediction>>({});
+  const [socialPredictions, setSocialPredictions] = useState<any>({});
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -88,6 +91,80 @@ export default function Home() {
   // Filters
   const [stageFilter, setStageFilter] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
+
+  // Admin tabs & states
+  const [activeAdminTab, setActiveAdminTab] = useState<"sync" | "users" | "stats">("sync");
+  const [adminUsers, setAdminUsers] = useState<any[]>([]);
+  const [adminStats, setAdminStats] = useState<any>(null);
+  const [loadingAdminUsers, setLoadingAdminUsers] = useState(false);
+  const [loadingAdminStats, setLoadingAdminStats] = useState(false);
+  const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
+
+  const fetchAdminUsers = useCallback(async () => {
+    try {
+      setLoadingAdminUsers(true);
+      const res = await fetch("/api/admin/users");
+      if (res.ok) {
+        const data = await res.json();
+        setAdminUsers(data.users);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar participantes:", error);
+    } finally {
+      setLoadingAdminUsers(false);
+    }
+  }, []);
+
+  const fetchAdminStats = useCallback(async () => {
+    try {
+      setLoadingAdminStats(true);
+      const res = await fetch("/api/admin/stats");
+      if (res.ok) {
+        const data = await res.json();
+        setAdminStats(data);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar estatísticas:", error);
+    } finally {
+      setLoadingAdminStats(false);
+    }
+  }, []);
+
+  const handleDeleteUser = async (id: number) => {
+    if (!confirm("Tem certeza que deseja remover este participante? Todos os palpites dele serão excluídos permanentemente.")) {
+      return;
+    }
+    try {
+      setDeletingUserId(id);
+      const res = await fetch(`/api/admin/users/${id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao remover usuário.");
+      
+      await fetchAdminUsers();
+      
+      const leaderboardRes = await fetch("/api/leaderboard");
+      if (leaderboardRes.ok) {
+        const leaderboardData = await leaderboardRes.json();
+        setLeaderboard(leaderboardData.leaderboard);
+      }
+    } catch (error: any) {
+      alert(error.message);
+    } finally {
+      setDeletingUserId(null);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "admin" && isAdmin) {
+      if (activeAdminTab === "users") {
+        fetchAdminUsers();
+      } else if (activeAdminTab === "stats") {
+        fetchAdminStats();
+      }
+    }
+  }, [activeTab, activeAdminTab, isAdmin, fetchAdminUsers, fetchAdminStats]);
 
   const loadData = useCallback(async () => {
     try {
@@ -117,6 +194,7 @@ export default function Home() {
 
       setPredictions(predictionMap);
       setPredictedScores(initialScores);
+      setSocialPredictions(matchesData.socialPredictions || {});
 
       const leaderboardRes = await fetch("/api/leaderboard");
       if (!leaderboardRes.ok) throw new Error("Erro ao carregar a classificação.");
@@ -159,6 +237,12 @@ export default function Home() {
         ...prev,
         [matchId]: { type: "success", text: "Salvo!" },
       }));
+
+      const matchesRes = await fetch("/api/matches");
+      if (matchesRes.ok) {
+        const matchesData = await matchesRes.json();
+        setSocialPredictions(matchesData.socialPredictions || {});
+      }
 
       const leaderboardRes = await fetch("/api/leaderboard");
       if (leaderboardRes.ok) {
@@ -358,9 +442,9 @@ export default function Home() {
       {/* ─── Main Content ─── */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
 
-        {/* ══════════════════════════════════════════════ */}
+        {/* ---------------------------------------------- */}
         {/* TAB: INÍCIO                                    */}
-        {/* ══════════════════════════════════════════════ */}
+        {/* ---------------------------------------------- */}
         {activeTab === "inicio" && (
           <div className="animate-fadeIn flex flex-col gap-8">
             {/* Hero */}
@@ -477,9 +561,55 @@ export default function Home() {
                               <User className="w-6 h-6 text-[#6b7280]" />
                             )}
                           </div>
-                          <span className="text-sm font-bold text-[#e8e8e8] text-center leading-tight">{match.awayTeamName}</span>
                         </div>
                       </div>
+
+                      {/* Social predictions (Palpites da Família) */}
+                      {socialPredictions[match.id] && (
+                        <div className="mt-4 pt-4 border-t border-[#1a3d24]/50">
+                          <details className="group">
+                            <summary className="text-[11px] font-bold text-[#9ca3af] uppercase tracking-wider cursor-pointer list-none flex items-center justify-between select-none">
+                              <span>👥 Palpites da Família</span>
+                              <ChevronRight className="w-3.5 h-3.5 transform transition-transform group-open:rotate-90 text-[#9ca3af]" />
+                            </summary>
+                            <div className="mt-3 flex flex-col gap-2 max-h-40 overflow-y-auto pr-1">
+                              {socialPredictions[match.id].participants.map((p: any) => {
+                                const isFinished = match.status === "FINISHED";
+                                const hasPoints = p.prediction?.pointsAwarded !== null && p.prediction?.pointsAwarded !== undefined;
+                                
+                                return (
+                                  <div key={p.userId} className="flex items-center justify-between text-xs py-1 px-2 rounded bg-[#0a1a0f]/40 border border-[#1a3d24]/20">
+                                    <span className="font-semibold text-[#e8e8e8] flex items-center gap-1.5">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-[#d4a017]" />
+                                      {p.displayName}
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                      {p.hasPredicted ? (
+                                        p.prediction.predictedHome !== null && p.prediction.predictedAway !== null ? (
+                                          <span className="font-bold text-[#d4a017] bg-[#d4a017]/10 px-2 py-0.5 rounded border border-[#d4a017]/20">
+                                            {p.prediction.predictedHome} x {p.prediction.predictedAway}
+                                            {isFinished && hasPoints && (
+                                              <span className="text-[10px] text-emerald-400 ml-1.5 font-bold">
+                                                (+{p.prediction.pointsAwarded} pts)
+                                              </span>
+                                            )}
+                                          </span>
+                                        ) : (
+                                          <span className="text-[10px] text-[#9ca3af] italic bg-[#1a3d24]/20 px-2 py-0.5 rounded border border-[#1a3d24]/30 flex items-center gap-1">
+                                            <Lock className="w-3 h-3 text-[#d4a017]" /> Palpite oculto
+                                          </span>
+                                        )
+                                      ) : (
+                                        <span className="text-[10px] text-[#6b7280] italic">Não palpitou</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </details>
+                        </div>
+                      )}
                     </div>
                   ))}
               </div>
@@ -491,9 +621,9 @@ export default function Home() {
           </div>
         )}
 
-        {/* ══════════════════════════════════════════════ */}
+        {/* ---------------------------------------------- */}
         {/* TAB: JOGOS                                     */}
-        {/* ══════════════════════════════════════════════ */}
+        {/* ---------------------------------------------- */}
         {activeTab === "jogos" && (
           <div className="flex flex-col gap-5 animate-fadeIn">
             <h2 className="text-2xl font-black text-[#e8e8e8] uppercase tracking-tight">Todos os Jogos</h2>
@@ -603,6 +733,53 @@ export default function Home() {
                         <span className="text-sm font-bold text-[#e8e8e8] text-center leading-tight">{match.awayTeamName}</span>
                       </div>
                     </div>
+
+                    {/* Social predictions (Palpites da Família) */}
+                    {socialPredictions[match.id] && (
+                      <div className="mt-4 pt-4 border-t border-[#1a3d24]/50">
+                        <details className="group">
+                          <summary className="text-[11px] font-bold text-[#9ca3af] uppercase tracking-wider cursor-pointer list-none flex items-center justify-between select-none">
+                            <span>👥 Palpites da Família</span>
+                            <ChevronRight className="w-3.5 h-3.5 transform transition-transform group-open:rotate-90 text-[#9ca3af]" />
+                          </summary>
+                          <div className="mt-3 flex flex-col gap-2 max-h-40 overflow-y-auto pr-1">
+                            {socialPredictions[match.id].participants.map((p: any) => {
+                              const isFinished = match.status === "FINISHED";
+                              const hasPoints = p.prediction?.pointsAwarded !== null && p.prediction?.pointsAwarded !== undefined;
+                              
+                              return (
+                                <div key={p.userId} className="flex items-center justify-between text-xs py-1 px-2 rounded bg-[#0a1a0f]/40 border border-[#1a3d24]/20">
+                                  <span className="font-semibold text-[#e8e8e8] flex items-center gap-1.5">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#d4a017]" />
+                                    {p.displayName}
+                                  </span>
+                                  <div className="flex items-center gap-2">
+                                    {p.hasPredicted ? (
+                                      p.prediction.predictedHome !== null && p.prediction.predictedAway !== null ? (
+                                        <span className="font-bold text-[#d4a017] bg-[#d4a017]/10 px-2 py-0.5 rounded border border-[#d4a017]/20">
+                                          {p.prediction.predictedHome} x {p.prediction.predictedAway}
+                                          {isFinished && hasPoints && (
+                                            <span className="text-[10px] text-emerald-400 ml-1.5 font-bold">
+                                              (+{p.prediction.pointsAwarded} pts)
+                                            </span>
+                                          )}
+                                        </span>
+                                      ) : (
+                                        <span className="text-[10px] text-[#9ca3af] italic bg-[#1a3d24]/20 px-2 py-0.5 rounded border border-[#1a3d24]/30 flex items-center gap-1">
+                                          <Lock className="w-3 h-3 text-[#d4a017]" /> Palpite oculto
+                                        </span>
+                                      )
+                                    ) : (
+                                      <span className="text-[10px] text-[#6b7280] italic">Não palpitou</span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </details>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -614,9 +791,9 @@ export default function Home() {
           </div>
         )}
 
-        {/* ══════════════════════════════════════════════ */}
+        {/* ---------------------------------------------- */}
         {/* TAB: RANKING                                   */}
-        {/* ══════════════════════════════════════════════ */}
+        {/* ---------------------------------------------- */}
         {activeTab === "ranking" && (
           <div className="flex flex-col gap-5 animate-fadeIn">
             <h2 className="text-2xl font-black text-[#e8e8e8] uppercase tracking-tight">Classificação</h2>
@@ -678,9 +855,9 @@ export default function Home() {
           </div>
         )}
 
-        {/* ══════════════════════════════════════════════ */}
+        {/* ---------------------------------------------- */}
         {/* TAB: PALPITES                                  */}
-        {/* ══════════════════════════════════════════════ */}
+        {/* ---------------------------------------------- */}
         {activeTab === "palpites" && (
           <div className="flex flex-col gap-5 animate-fadeIn">
             <div className="flex items-center justify-between">
@@ -738,11 +915,12 @@ export default function Home() {
                 return (
                   <div
                     key={match.id}
-                    className="match-card p-5 flex flex-col lg:flex-row items-center gap-5 animate-slideUp"
+                    className="match-card p-5 flex flex-col items-center gap-5 animate-slideUp"
                     style={{ animationDelay: `${Math.min(i, 6) * 40}ms` }}
                   >
-                    {/* Match info */}
-                    <div className="flex-1 w-full">
+                    <div className="w-full flex flex-col lg:flex-row items-center gap-5">
+                      {/* Match info */}
+                      <div className="flex-1 w-full">
                       {/* Header */}
                       <div className="flex items-center gap-2 mb-3">
                         <span className="text-[10px] font-bold text-[#2d8a4e] uppercase tracking-wider">
@@ -926,62 +1104,420 @@ export default function Home() {
                       )}
                     </div>
                   </div>
+
+                    {/* Social predictions (Palpites da Família) */}
+                    {socialPredictions[match.id] && (
+                      <div className="w-full mt-2 pt-4 border-t border-[#1a3d24]/50">
+                        <details className="group">
+                          <summary className="text-[11px] font-bold text-[#9ca3af] uppercase tracking-wider cursor-pointer list-none flex items-center justify-between select-none">
+                            <span>👥 Palpites da Família</span>
+                            <ChevronRight className="w-3.5 h-3.5 transform transition-transform group-open:rotate-90 text-[#9ca3af]" />
+                          </summary>
+                          <div className="mt-3 flex flex-col gap-2 max-h-40 overflow-y-auto pr-1">
+                            {socialPredictions[match.id].participants.map((p: any) => {
+                              const isFinished = match.status === "FINISHED";
+                              const hasPoints = p.prediction?.pointsAwarded !== null && p.prediction?.pointsAwarded !== undefined;
+                              
+                              return (
+                                <div key={p.userId} className="flex items-center justify-between text-xs py-1 px-2 rounded bg-[#0a1a0f]/40 border border-[#1a3d24]/20">
+                                  <span className="font-semibold text-[#e8e8e8] flex items-center gap-1.5">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#d4a017]" />
+                                    {p.displayName}
+                                  </span>
+                                  <div className="flex items-center gap-2">
+                                    {p.hasPredicted ? (
+                                      p.prediction.predictedHome !== null && p.prediction.predictedAway !== null ? (
+                                        <span className="font-bold text-[#d4a017] bg-[#d4a017]/10 px-2 py-0.5 rounded border border-[#d4a017]/20">
+                                          {p.prediction.predictedHome} x {p.prediction.predictedAway}
+                                          {isFinished && hasPoints && (
+                                            <span className="text-[10px] text-emerald-400 ml-1.5 font-bold">
+                                              (+{p.prediction.pointsAwarded} pts)
+                                            </span>
+                                          )}
+                                        </span>
+                                      ) : (
+                                        <span className="text-[10px] text-[#9ca3af] italic bg-[#1a3d24]/20 px-2 py-0.5 rounded border border-[#1a3d24]/30 flex items-center gap-1">
+                                          <Lock className="w-3 h-3 text-[#d4a017]" /> Palpite oculto
+                                        </span>
+                                      )
+                                    ) : (
+                                      <span className="text-[10px] text-[#6b7280] italic">Não palpitou</span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </details>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
           </div>
         )}
 
-        {/* ══════════════════════════════════════════════ */}
+        {/* ---------------------------------------------- */}
         {/* TAB: ADMIN                                     */}
-        {/* ══════════════════════════════════════════════ */}
+        {/* ---------------------------------------------- */}
         {activeTab === "admin" && isAdmin && (
           <div className="flex flex-col gap-5 animate-fadeIn">
             <h2 className="text-2xl font-black text-[#e8e8e8] uppercase tracking-tight">Painel Admin</h2>
 
-            <div className="card-glass rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-[#e8e8e8] mb-2 flex items-center gap-2">
-                <Settings className="w-5 h-5 text-[#d4a017]" />
-                Sincronização de Dados
-              </h3>
-              <p className="text-sm text-[#9ca3af] mb-6 leading-relaxed">
-                Força a sincronização com a API do <strong className="text-[#e8e8e8]">football-data.org</strong>, ignorando o cache de 60s e
-                recalculando as pontuações.
-              </p>
+            {/* Sub-Navigation for Admin Panel */}
+            <div className="flex border-b border-[#1a3d24] mb-2">
+              <button
+                onClick={() => setActiveAdminTab("sync")}
+                className={`px-4 py-2 font-bold text-sm transition-all border-b-2 cursor-pointer flex items-center gap-2 ${
+                  activeAdminTab === "sync"
+                    ? "border-[#d4a017] text-[#d4a017]"
+                    : "border-transparent text-[#9ca3af] hover:text-[#e8e8e8]"
+                }`}
+              >
+                <Settings className="w-4 h-4" />
+                Sincronização
+              </button>
+              <button
+                onClick={() => setActiveAdminTab("users")}
+                className={`px-4 py-2 font-bold text-sm transition-all border-b-2 cursor-pointer flex items-center gap-2 ${
+                  activeAdminTab === "users"
+                    ? "border-[#d4a017] text-[#d4a017]"
+                    : "border-transparent text-[#9ca3af] hover:text-[#e8e8e8]"
+                }`}
+              >
+                <Users className="w-4 h-4" />
+                Participantes
+              </button>
+              <button
+                onClick={() => setActiveAdminTab("stats")}
+                className={`px-4 py-2 font-bold text-sm transition-all border-b-2 cursor-pointer flex items-center gap-2 ${
+                  activeAdminTab === "stats"
+                    ? "border-[#d4a017] text-[#d4a017]"
+                    : "border-transparent text-[#9ca3af] hover:text-[#e8e8e8]"
+                }`}
+              >
+                <BarChart3 className="w-4 h-4" />
+                Estatísticas
+              </button>
+            </div>
 
-              <div className="flex flex-col sm:flex-row items-center gap-4">
-                <button
-                  onClick={handleForceSync}
-                  disabled={syncing}
-                  className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#d4a017] hover:bg-[#e6b422] text-[#0a1a0f] font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#d4a017]/20 cursor-pointer disabled:opacity-50"
-                >
-                  {syncing ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      Sincronizando...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="w-4 h-4" />
-                      Sincronizar Resultados
-                    </>
-                  )}
-                </button>
+            {/* Sub-tab: Sync */}
+            {activeAdminTab === "sync" && (
+              <div className="card-glass rounded-2xl p-6">
+                <h3 className="text-lg font-bold text-[#e8e8e8] mb-2 flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-[#d4a017]" />
+                  Sincronização de Dados
+                </h3>
+                <p className="text-sm text-[#9ca3af] mb-6 leading-relaxed">
+                  Força a sincronização com a API do <strong className="text-[#e8e8e8]">football-data.org</strong>, ignorando o cache de 60s e
+                  recalculando as pontuações.
+                </p>
 
-                {syncMessage && (
-                  <div
-                    className={`p-3 rounded-lg border flex items-center gap-2 ${
-                      syncMessage.type === "success"
-                        ? "bg-emerald-950/20 border-emerald-900/50 text-emerald-400"
-                        : "bg-red-950/20 border-red-900/50 text-red-400"
-                    }`}
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  <button
+                    onClick={handleForceSync}
+                    disabled={syncing}
+                    className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#d4a017] hover:bg-[#e6b422] text-[#0a1a0f] font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#d4a017]/20 cursor-pointer disabled:opacity-50"
                   >
-                    {syncMessage.type === "success" ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-                    <span className="text-xs font-bold">{syncMessage.text}</span>
+                    {syncing ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        Sincronizando...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-4 h-4" />
+                        Sincronizar Resultados
+                      </>
+                    )}
+                  </button>
+
+                  {syncMessage && (
+                    <div
+                      className={`p-3 rounded-lg border flex items-center gap-2 ${
+                        syncMessage.type === "success"
+                          ? "bg-emerald-950/20 border-emerald-900/50 text-emerald-400"
+                          : "bg-red-950/20 border-red-900/50 text-red-400"
+                      }`}
+                    >
+                      {syncMessage.type === "success" ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                      <span className="text-xs font-bold">{syncMessage.text}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Sub-tab: Users (Participantes) */}
+            {activeAdminTab === "users" && (
+              <div className="flex flex-col gap-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-bold text-[#e8e8e8] flex items-center gap-2">
+                    <Users className="w-5 h-5 text-[#d4a017]" />
+                    Participantes Cadastrados
+                  </h3>
+                  <button
+                    onClick={fetchAdminUsers}
+                    className="text-xs font-bold text-[#d4a017] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <RefreshCw className="w-3 h-3" /> Atualizar Lista
+                  </button>
+                </div>
+
+                {loadingAdminUsers ? (
+                  <div className="flex justify-center py-8">
+                    <RefreshCw className="w-6 h-6 animate-spin text-[#d4a017]" />
+                  </div>
+                ) : adminUsers.length === 0 ? (
+                  <p className="text-sm text-[#9ca3af] py-4">Nenhum participante cadastrado.</p>
+                ) : (
+                  <div className="overflow-x-auto rounded-xl border border-[#1a3d24]">
+                    <table className="w-full text-left border-collapse text-sm">
+                      <thead>
+                        <tr className="bg-[#0f2a18] text-[#9ca3af] font-bold border-b border-[#1a3d24]">
+                          <th className="p-4">Nome</th>
+                          <th className="p-4">Palpites</th>
+                          <th className="p-4">Pontuação</th>
+                          <th className="p-4 text-right">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#1a3d24]/50">
+                        {adminUsers.map((u) => {
+                          const isSelf = u.clerkUserId === user?.clerkUserId;
+                          return (
+                            <tr key={u.id} className="hover:bg-[#0d2214]/40 transition-colors">
+                              <td className="p-4 font-bold text-[#e8e8e8] flex items-center gap-2">
+                                {u.displayName}
+                                {isSelf && (
+                                  <span className="text-xs px-2 py-0.5 rounded bg-[#d4a017]/10 text-[#d4a017] border border-[#d4a017]/20 font-normal">
+                                    Você
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-4 text-[#9ca3af]">
+                                {u.totalPredictions} / {matches.length}
+                              </td>
+                              <td className="p-4 font-bold text-[#d4a017]">{u.totalPoints} pts</td>
+                              <td className="p-4 text-right">
+                                {!isSelf ? (
+                                  <button
+                                    onClick={() => handleDeleteUser(u.id)}
+                                    disabled={deletingUserId === u.id}
+                                    className="px-3 py-1.5 rounded-lg bg-red-950/40 hover:bg-red-900/40 text-red-400 border border-red-900/50 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
+                                  >
+                                    {deletingUserId === u.id ? "Removendo..." : "Remover"}
+                                  </button>
+                                ) : (
+                                  <span className="text-[#6b7280] text-xs font-bold">—</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
-            </div>
+            )}
+
+            {/* Sub-tab: Stats (Estatísticas) */}
+            {activeAdminTab === "stats" && (
+              <div className="flex flex-col gap-6">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-bold text-[#e8e8e8] flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-[#d4a017]" />
+                    Estatísticas do Bolão
+                  </h3>
+                  <button
+                    onClick={fetchAdminStats}
+                    className="text-xs font-bold text-[#d4a017] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <RefreshCw className="w-3 h-3" /> Atualizar Estatísticas
+                  </button>
+                </div>
+
+                {loadingAdminStats ? (
+                  <div className="flex justify-center py-8">
+                    <RefreshCw className="w-6 h-6 animate-spin text-[#d4a017]" />
+                  </div>
+                ) : !adminStats ? (
+                  <p className="text-sm text-[#9ca3af] py-4">Nenhuma estatística disponível.</p>
+                ) : (
+                  <>
+                    {/* Overview Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div className="card-glass p-5 rounded-2xl border border-[#1a3d24] flex flex-col justify-between">
+                        <span className="text-xs font-bold text-[#9ca3af] uppercase tracking-wider">Total de Palpites</span>
+                        <span className="text-3xl font-black text-[#e8e8e8] mt-2">{adminStats.overview.totalPredictions}</span>
+                      </div>
+                      <div className="card-glass p-5 rounded-2xl border border-[#1a3d24] flex flex-col justify-between">
+                        <span className="text-xs font-bold text-[#9ca3af] uppercase tracking-wider">Participantes</span>
+                        <span className="text-3xl font-black text-[#e8e8e8] mt-2">{adminStats.overview.totalParticipants}</span>
+                      </div>
+                      <div className="card-glass p-5 rounded-2xl border border-[#1a3d24] flex flex-col justify-between">
+                        <span className="text-xs font-bold text-[#9ca3af] uppercase tracking-wider">Pontos Distribuídos</span>
+                        <span className="text-3xl font-black text-[#d4a017] mt-2">{adminStats.overview.totalPointsDistributed} pts</span>
+                      </div>
+                      <div className="card-glass p-5 rounded-2xl border border-[#1a3d24] flex flex-col justify-between">
+                        <span className="text-xs font-bold text-[#9ca3af] uppercase tracking-wider">Jogos c/ 100% Palpites</span>
+                        <span className="text-3xl font-black text-[#e8e8e8] mt-2">{adminStats.overview.gamesWithFullParticipation}</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Points Distribution */}
+                      <div className="card-glass p-6 rounded-2xl border border-[#1a3d24] flex flex-col justify-between gap-4">
+                        <h4 className="text-sm font-black text-[#e8e8e8] uppercase tracking-wider">Distribuição de Pontuações</h4>
+                        <div className="flex flex-col gap-4">
+                          {/* 10 pts */}
+                          <div>
+                            <div className="flex justify-between text-xs font-bold mb-1">
+                              <span className="text-emerald-400">Placar Exato (10 pts)</span>
+                              <span className="text-[#e8e8e8]">{adminStats.pointsDistribution.exactScore} ({adminStats.overview.totalPredictions > 0 ? Math.round((adminStats.pointsDistribution.exactScore / adminStats.overview.totalPredictions) * 100) : 0}%)</span>
+                            </div>
+                            <div className="w-full bg-[#0a1a0f] h-2.5 rounded-full overflow-hidden border border-[#1a3d24]">
+                              <div
+                                className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                                style={{
+                                  width: `${
+                                    adminStats.overview.totalPredictions > 0
+                                      ? Math.round((adminStats.pointsDistribution.exactScore / adminStats.overview.totalPredictions) * 100)
+                                      : 0
+                                  }%`
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* 7 pts */}
+                          <div>
+                            <div className="flex justify-between text-xs font-bold mb-1">
+                              <span className="text-cyan-400">Resultado e Saldo (7 pts)</span>
+                              <span className="text-[#e8e8e8]">{adminStats.pointsDistribution.resultAndGD} ({adminStats.overview.totalPredictions > 0 ? Math.round((adminStats.pointsDistribution.resultAndGD / adminStats.overview.totalPredictions) * 100) : 0}%)</span>
+                            </div>
+                            <div className="w-full bg-[#0a1a0f] h-2.5 rounded-full overflow-hidden border border-[#1a3d24]">
+                              <div
+                                className="bg-cyan-500 h-full rounded-full transition-all duration-500"
+                                style={{
+                                  width: `${
+                                    adminStats.overview.totalPredictions > 0
+                                      ? Math.round((adminStats.pointsDistribution.resultAndGD / adminStats.overview.totalPredictions) * 100)
+                                      : 0
+                                  }%`
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* 5 pts */}
+                          <div>
+                            <div className="flex justify-between text-xs font-bold mb-1">
+                              <span className="text-[#d4a017]">Apenas Resultado (5 pts)</span>
+                              <span className="text-[#e8e8e8]">{adminStats.pointsDistribution.resultOnly} ({adminStats.overview.totalPredictions > 0 ? Math.round((adminStats.pointsDistribution.resultOnly / adminStats.overview.totalPredictions) * 100) : 0}%)</span>
+                            </div>
+                            <div className="w-full bg-[#0a1a0f] h-2.5 rounded-full overflow-hidden border border-[#1a3d24]">
+                              <div
+                                className="bg-[#d4a017] h-full rounded-full transition-all duration-500"
+                                style={{
+                                  width: `${
+                                    adminStats.overview.totalPredictions > 0
+                                      ? Math.round((adminStats.pointsDistribution.resultOnly / adminStats.overview.totalPredictions) * 100)
+                                      : 0
+                                  }%`
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* 0 pts */}
+                          <div>
+                            <div className="flex justify-between text-xs font-bold mb-1">
+                              <span className="text-red-400">Erros (0 pts)</span>
+                              <span className="text-[#e8e8e8]">{adminStats.pointsDistribution.wrong} ({adminStats.overview.totalPredictions > 0 ? Math.round((adminStats.pointsDistribution.wrong / adminStats.overview.totalPredictions) * 100) : 0}%)</span>
+                            </div>
+                            <div className="w-full bg-[#0a1a0f] h-2.5 rounded-full overflow-hidden border border-[#1a3d24]">
+                              <div
+                                className="bg-red-500 h-full rounded-full transition-all duration-500"
+                                style={{
+                                  width: `${
+                                    adminStats.overview.totalPredictions > 0
+                                      ? Math.round((adminStats.pointsDistribution.wrong / adminStats.overview.totalPredictions) * 100)
+                                      : 0
+                                  }%`
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Hot and Cold Games */}
+                      <div className="card-glass p-6 rounded-2xl border border-[#1a3d24] flex flex-col justify-between gap-4">
+                        <div>
+                          <h4 className="text-xs font-black text-emerald-400 uppercase tracking-wider mb-2">
+                            🔥 Jogos Mais Palpitados
+                          </h4>
+                          <ul className="flex flex-col gap-1.5">
+                            {adminStats.topAndBottomGames.top.map((m: any, idx: number) => (
+                              <li key={idx} className="flex justify-between text-xs font-semibold py-1.5 border-b border-[#1a3d24]/30 last:border-0 text-[#e8e8e8]">
+                                <span>{m.homeTeam} vs {m.awayTeam}</span>
+                                <span className="text-emerald-400 font-bold">{m.count} palpites</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div className="mt-2">
+                          <h4 className="text-xs font-black text-cyan-400 uppercase tracking-wider mb-2">
+                            ❄️ Jogos Menos Palpitados
+                          </h4>
+                          <ul className="flex flex-col gap-1.5">
+                            {adminStats.topAndBottomGames.bottom.map((m: any, idx: number) => (
+                              <li key={idx} className="flex justify-between text-xs font-semibold py-1.5 border-b border-[#1a3d24]/30 last:border-0 text-[#e8e8e8]">
+                                <span>{m.homeTeam} vs {m.awayTeam}</span>
+                                <span className="text-cyan-400 font-bold">{m.count} palpites</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Participant Engagement */}
+                    <div className="card-glass p-6 rounded-2xl border border-[#1a3d24]">
+                      <h4 className="text-sm font-black text-[#e8e8e8] uppercase tracking-wider mb-4">Engajamento por Participante</h4>
+                      <div className="overflow-x-auto rounded-xl border border-[#1a3d24]/70">
+                        <table className="w-full text-left border-collapse text-xs">
+                          <thead>
+                            <tr className="bg-[#0f2a18] text-[#9ca3af] font-bold border-b border-[#1a3d24]">
+                              <th className="p-3">Nome</th>
+                              <th className="p-3 text-center">Palpites Feitos</th>
+                              <th className="p-3 text-center">Cobertura</th>
+                              <th className="p-3 text-center">Exatos (10 pts)</th>
+                              <th className="p-3 text-center">Média Pts/Palpite</th>
+                              <th className="p-3 text-right">Pontos Totais</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[#1a3d24]/50">
+                            {adminStats.participantEngagement.map((p: any) => (
+                              <tr key={p.userId} className="hover:bg-[#0d2214]/40 transition-colors">
+                                <td className="p-3 font-bold text-[#e8e8e8]">{p.displayName}</td>
+                                <td className="p-3 text-center text-[#9ca3af]">{p.predictionCount} / {matches.length}</td>
+                                <td className="p-3 text-center font-semibold text-[#e8e8e8]">{p.coveragePercent}%</td>
+                                <td className="p-3 text-center text-emerald-400 font-bold">{p.exactScores}</td>
+                                <td className="p-3 text-center text-[#9ca3af]">{p.avgPointsPerPrediction} pts</td>
+                                <td className="p-3 text-right font-black text-[#d4a017]">{p.totalPoints} pts</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         )}
       </main>
