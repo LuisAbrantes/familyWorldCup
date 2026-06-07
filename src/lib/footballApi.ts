@@ -31,11 +31,16 @@ export async function fetchMatchesFromApi(): Promise<{ matches: ApiMatch[] }> {
   // Force WC 2026 competition
   const url = `${BASE_URL}/competitions/WC/matches?season=2026`;
 
-  const response = await fetch(url, {
-    headers: {
-      "X-Auth-Token": apiKey,
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: {
+        "X-Auth-Token": apiKey,
+      },
+    });
+  } catch (err: any) {
+    throw new Error(`Failed to fetch match data: ${err?.message || "Unknown network error"}`);
+  }
 
   // Extract rate-limit headers for auditing
   const availableStr = response.headers.get("x-requests-available-minute");
@@ -44,7 +49,8 @@ export async function fetchMatchesFromApi(): Promise<{ matches: ApiMatch[] }> {
   console.log(`[Football-Data API] Available requests/min: ${availableStr}, Reset time (seconds): ${resetStr}`);
 
   if (response.status === 429) {
-    const retryAfter = resetStr ? parseInt(resetStr, 10) : 60;
+    const parsedReset = resetStr ? parseInt(resetStr, 10) : NaN;
+    const retryAfter = isNaN(parsedReset) ? 60 : parsedReset;
     throw new Error(`Rate limit hit. Retry after ${retryAfter} seconds.`);
   }
 

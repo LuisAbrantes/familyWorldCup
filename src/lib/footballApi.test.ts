@@ -1,8 +1,13 @@
-import { expect, test, vi, beforeEach } from "vitest";
+import { expect, test, vi, beforeEach, afterEach } from "vitest";
 import { fetchMatchesFromApi } from "./footballApi";
 
 beforeEach(() => {
   vi.stubEnv("FOOTBALL_DATA_API_KEY", "test_key");
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
 });
 
 test("fetchMatchesFromApi parses rate limit headers and fetches correctly", async () => {
@@ -10,10 +15,10 @@ test("fetchMatchesFromApi parses rate limit headers and fetches correctly", asyn
   
   const mockFetch = vi.fn().mockResolvedValue({
     ok: true,
-    headers: new Map([
-      ["x-requests-available-minute", "9"],
-      ["x-requestcounter-reset", "45"]
-    ]),
+    headers: new Headers({
+      "x-requests-available-minute": "9",
+      "x-requestcounter-reset": "45"
+    }),
     json: async () => ({ matches: mockMatches })
   });
   
@@ -32,10 +37,10 @@ test("fetchMatchesFromApi throws error with reset time on 429 status", async () 
   const mockFetch = vi.fn().mockResolvedValue({
     status: 429,
     ok: false,
-    headers: new Map([
-      ["x-requests-available-minute", "0"],
-      ["x-requestcounter-reset", "30"]
-    ]),
+    headers: new Headers({
+      "x-requests-available-minute": "0",
+      "x-requestcounter-reset": "30"
+    }),
     json: async () => ({})
   });
   
@@ -48,5 +53,12 @@ test("fetchMatchesFromApi throws error when API key is missing", async () => {
   vi.stubEnv("FOOTBALL_DATA_API_KEY", "");
   
   await expect(fetchMatchesFromApi()).rejects.toThrow("FOOTBALL_DATA_API_KEY is not defined in environment variables.");
+});
+
+test("fetchMatchesFromApi handles fetch network failures", async () => {
+  const mockFetch = vi.fn().mockRejectedValue(new Error("DNS timeout"));
+  vi.stubGlobal("fetch", mockFetch);
+  
+  await expect(fetchMatchesFromApi()).rejects.toThrow("Failed to fetch match data: DNS timeout");
 });
 
