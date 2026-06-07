@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, uniqueIndex, index } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -26,15 +26,19 @@ export const predictions = pgTable(
   "predictions",
   {
     id: serial("id").primaryKey(),
-    userId: integer("user_id").references(() => users.id).notNull(),
-    matchId: integer("match_id").references(() => matches.id).notNull(),
+    userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    matchId: integer("match_id").references(() => matches.id, { onDelete: "cascade" }).notNull(),
     predictedHome: integer("predicted_home").notNull(),
     predictedAway: integer("predicted_away").notNull(),
     pointsAwarded: integer("points_awarded"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
   },
   (table) => [
-    uniqueIndex("user_match_idx").on(table.userId, table.matchId)
+    uniqueIndex("user_match_idx").on(table.userId, table.matchId),
+    index("predictions_match_id_idx").on(table.matchId)
   ]
 );
