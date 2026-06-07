@@ -14,5 +14,6 @@ export const config = {
     "/((?!_next|[^?]*\\.(?:html|css|js(?!on)|gif|svg|png|webp|jpg|jpeg|curl|ico|woff\\d?|ttf|manifest\\.json)).*)",
     // Always run for API routes
     "/(api|trpc)(.*)",
+    "/__clerk/:path*",
   ],
 };
