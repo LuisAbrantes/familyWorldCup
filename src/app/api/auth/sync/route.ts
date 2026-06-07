@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getOrCreateLocalUser } from "../../../../lib/auth";
+import { getOrCreateLocalUser } from "@/lib/auth";
 
 export async function GET() {
   try {
