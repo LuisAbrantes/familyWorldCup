@@ -100,6 +100,31 @@ export default function Home() {
   const [loadingAdminStats, setLoadingAdminStats] = useState(false);
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
 
+  // User profile modal states
+  const [selectedProfileUser, setSelectedProfileUser] = useState<any | null>(null);
+  const [profilePredictions, setProfilePredictions] = useState<any[]>([]);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
+  const handleOpenProfile = async (userId: number) => {
+    setIsProfileModalOpen(true);
+    setLoadingProfile(true);
+    setSelectedProfileUser(null);
+    setProfilePredictions([]);
+    try {
+      const res = await fetch(`/api/users/${userId}/predictions`);
+      if (res.ok) {
+        const data = await res.json();
+        setSelectedProfileUser(data.user);
+        setProfilePredictions(data.predictions);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar perfil:", error);
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
+
   const fetchAdminUsers = useCallback(async () => {
     try {
       setLoadingAdminUsers(true);
@@ -831,9 +856,14 @@ export default function Home() {
                           )}
                         </td>
                         <td className="py-4 px-5 font-semibold text-sm text-[#e8e8e8]">
-                          {row.displayName}
+                          <button
+                            onClick={() => handleOpenProfile(row.id)}
+                            className="hover:text-[#d4a017] hover:underline transition-colors font-semibold text-left cursor-pointer flex items-center gap-1.5"
+                          >
+                            {row.displayName}
+                          </button>
                           {row.isCurrentUser && (
-                            <span className="ml-2 text-[10px] font-bold text-[#d4a017] bg-[#d4a017]/10 border border-[#d4a017]/20 px-2 py-0.5 rounded-full">
+                            <span className="ml-2 text-[10px] font-bold text-[#d4a017] bg-[#d4a017]/10 border border-[#d4a017]/20 px-2 py-0.5 rounded-full inline-block">
                               Você
                             </span>
                           )}
@@ -1518,6 +1548,125 @@ export default function Home() {
                 )}
               </div>
             )}
+          </div>
+        )}
+        {/* MODAL: PERFIL DO USUÁRIO */}
+        {isProfileModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+            <div className="card-glass border border-[#1a3d24] rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+              {/* Header */}
+              <div className="p-6 border-b border-[#1a3d24] flex items-center justify-between bg-[#0f2a18]/80">
+                <div>
+                  <h3 className="text-xl font-black text-[#e8e8e8] flex items-center gap-2">
+                    <User className="w-6 h-6 text-[#d4a017]" />
+                    {loadingProfile ? "Carregando..." : `Palpites de ${selectedProfileUser?.displayName}`}
+                  </h3>
+                  <p className="text-xs text-[#9ca3af] mt-1">
+                    Rede Social do Bolão • Copa do Mundo 2026
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsProfileModalOpen(false)}
+                  className="px-4 py-2 rounded-lg bg-[#0a1a0f] border border-[#1a3d24] text-[#9ca3af] hover:text-[#e8e8e8] hover:bg-[#1a3d24] transition-all cursor-pointer font-bold text-xs"
+                >
+                  Fechar
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
+                {loadingProfile ? (
+                  <div className="flex flex-col items-center justify-center py-20 gap-3">
+                    <RefreshCw className="w-8 h-8 animate-spin text-[#d4a017]" />
+                    <span className="text-sm font-semibold text-[#9ca3af]">Buscando palpites da família...</span>
+                  </div>
+                ) : !profilePredictions || profilePredictions.length === 0 ? (
+                  <p className="text-center py-12 text-sm text-[#9ca3af] italic">Nenhum palpite registrado por este participante.</p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {profilePredictions.map((p) => {
+                      const isFinished = p.status === "FINISHED";
+                      const isLive = p.status === "IN_PLAY" || p.status === "PAUSED";
+                      const hasPoints = p.pointsAwarded !== null && p.pointsAwarded !== undefined;
+
+                      return (
+                        <div
+                          key={p.id}
+                          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-[#0d2214]/60 border border-[#1a3d24]/50 hover:bg-[#133220]/60 transition-all"
+                        >
+                          {/* Match Details */}
+                          <div className="flex flex-col gap-1 flex-1">
+                            <span className="text-[9px] font-black text-[#2d8a4e] uppercase tracking-wider">
+                              {stageLabel(p.stage)}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              {/* Home Crest */}
+                              <div className="w-5 h-5 flex items-center justify-center">
+                                {p.homeTeamCrest ? (
+                                  <img src={p.homeTeamCrest} alt={p.homeTeamName} className="object-contain max-h-full max-w-full" />
+                                ) : (
+                                  <div className="w-1.5 h-1.5 rounded-full bg-[#6b7280]" />
+                                )}
+                              </div>
+                              <span className="text-xs font-bold text-[#e8e8e8]">{p.homeTeamName}</span>
+                              <span className="text-[10px] font-bold text-[#6b7280]">vs</span>
+                              <span className="text-xs font-bold text-[#e8e8e8]">{p.awayTeamName}</span>
+                              {/* Away Crest */}
+                              <div className="w-5 h-5 flex items-center justify-center">
+                                {p.awayTeamCrest ? (
+                                  <img src={p.awayTeamCrest} alt={p.awayTeamName} className="object-contain max-h-full max-w-full" />
+                                ) : (
+                                  <div className="w-1.5 h-1.5 rounded-full bg-[#6b7280]" />
+                                )}
+                              </div>
+                            </div>
+                            {/* Real Match Score if finished/live */}
+                            {(isFinished || isLive) && (
+                              <span className="text-[10px] font-bold text-[#9ca3af] flex items-center gap-1">
+                                Placar Oficial: <strong className={isLive ? "text-red-400 animate-pulse" : "text-[#e8e8e8]"}>{p.homeScore} x {p.awayScore}</strong>
+                                {isLive && <span className="text-[8px] bg-red-950 border border-red-900 px-1 py-0.5 rounded text-red-400 font-bold uppercase animate-pulse">Ao Vivo</span>}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Prediction info & Points */}
+                          <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
+                            {p.isOculto ? (
+                              <span className="text-[10px] text-[#9ca3af] italic bg-[#1a3d24]/20 px-2.5 py-1 rounded border border-[#1a3d24]/30 flex items-center gap-1.5">
+                                <Lock className="w-3.5 h-3.5 text-[#d4a017]" /> Palpite oculto
+                              </span>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-black text-[#d4a017] bg-[#d4a017]/10 px-2.5 py-1 rounded border border-[#d4a017]/25 flex items-center gap-1">
+                                  <span className="text-[9px] font-bold text-[#9ca3af] mr-1 uppercase">Palpite:</span>
+                                  {p.predictedHome} x {p.predictedAway}
+                                </span>
+
+                                {isFinished && hasPoints && (
+                                  <span
+                                    className={`text-[10px] font-black px-2.5 py-1 rounded border ${
+                                      p.pointsAwarded === 10
+                                        ? "bg-emerald-950/40 text-emerald-400 border-emerald-900/40"
+                                        : p.pointsAwarded === 7
+                                        ? "bg-cyan-950/40 text-cyan-400 border-cyan-900/40"
+                                        : p.pointsAwarded === 5
+                                        ? "bg-[#d4a017]/10 text-[#d4a017] border-[#d4a017]/20"
+                                        : "bg-red-950/40 text-red-400 border-red-900/40"
+                                    }`}
+                                  >
+                                    +{p.pointsAwarded} pts
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </main>
