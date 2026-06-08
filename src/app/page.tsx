@@ -997,7 +997,7 @@ export default function Home() {
                         Fale comigo no WhatsApp para acertar o PIX e liberar a criação da sua sala agora mesmo!
                       </div>
                       <a
-                        href={`https://wa.me/5511999999999?text=Ol%C3%A1!%20Gostaria%20de%20criar%20uma%20sala%20no%20bol%C3%A3o.%20Meu%20e-mail%20cadastrado%20%C3%A9%3A%20${encodeURIComponent(user.email || "")}`}
+                        href={`https://wa.me/5512981451610?text=Ol%C3%A1!%20Gostaria%20de%20criar%20uma%20sala%20no%20bol%C3%A3o.%20Meu%20e-mail%20cadastrado%20%C3%A9%3A%20${encodeURIComponent(user.email || "")}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="w-full border border-green-600/40 text-green-400 bg-green-950/20 hover:bg-green-950/40 py-2.5 rounded-lg text-xs font-bold text-center transition-all block shadow-lg shadow-green-950/20"
