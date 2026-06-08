@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { isAdmin } from "@/lib/auth";
+import { getOrCreateLocalUser, isAdmin } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 
 export async function DELETE(
@@ -10,10 +9,10 @@ export async function DELETE(
   props: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId: clerkUserId } = await auth();
-    const isUserAdmin = await isAdmin(clerkUserId);
+    const localUser = await getOrCreateLocalUser(request);
+    const isUserAdmin = localUser ? await isAdmin(localUser.clerkUserId) : false;
 
-    if (!isUserAdmin) {
+    if (!localUser || !isUserAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -33,7 +32,7 @@ export async function DELETE(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    if (userToDelete.clerkUserId === clerkUserId) {
+    if (userToDelete.clerkUserId === localUser.clerkUserId) {
       return NextResponse.json({ error: "Cannot delete yourself" }, { status: 400 });
     }
 

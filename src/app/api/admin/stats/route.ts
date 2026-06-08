@@ -1,16 +1,15 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { users, matches, predictions } from "@/db/schema";
-import { isAdmin } from "@/lib/auth";
+import { getOrCreateLocalUser, isAdmin } from "@/lib/auth";
 import { eq, count, sum, sql, desc, asc } from "drizzle-orm";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const { userId } = await auth();
-    const isUserAdmin = await isAdmin(userId);
+    const localUser = await getOrCreateLocalUser(req);
+    const isUserAdmin = localUser ? await isAdmin(localUser.clerkUserId) : false;
 
-    if (!isUserAdmin) {
+    if (!localUser || !isUserAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

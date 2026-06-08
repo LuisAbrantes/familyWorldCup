@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { getOrCreateLocalUser, isAdmin } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const user = await getOrCreateLocalUser();
+    const user = await getOrCreateLocalUser(req);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

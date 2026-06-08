@@ -4,9 +4,9 @@ import { users, predictions } from "@/db/schema";
 import { getOrCreateLocalUser } from "@/lib/auth";
 import { eq, sum } from "drizzle-orm";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const localUser = await getOrCreateLocalUser();
+    const localUser = await getOrCreateLocalUser(req);
     if (!localUser) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

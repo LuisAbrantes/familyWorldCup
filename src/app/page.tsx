@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { UserButton } from "@clerk/nextjs";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "";
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 import {
   Trophy,
   Calendar,
@@ -106,13 +110,39 @@ export default function Home() {
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
+  const fetchWithAuth = useCallback(async (url: string, options: RequestInit = {}) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    
+    const headers = new Headers(options.headers);
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+    
+    return fetch(url, {
+      ...options,
+      headers,
+    });
+  }, []);
+
+  const handleLogout = async () => {
+    if (confirm("Deseja realmente sair?")) {
+      await supabase.auth.signOut();
+      setUser(null);
+      setIsAdmin(false);
+      setMatches([]);
+      setLeaderboard([]);
+      setPredictions({});
+    }
+  };
+
   const handleOpenProfile = async (userId: number) => {
     setIsProfileModalOpen(true);
     setLoadingProfile(true);
     setSelectedProfileUser(null);
     setProfilePredictions([]);
     try {
-      const res = await fetch(`/api/users/${userId}/predictions`);
+      const res = await fetchWithAuth(`/api/users/${userId}/predictions`);
       if (res.ok) {
         const data = await res.json();
         setSelectedProfileUser(data.user);
@@ -128,7 +158,7 @@ export default function Home() {
   const fetchAdminUsers = useCallback(async () => {
     try {
       setLoadingAdminUsers(true);
-      const res = await fetch("/api/admin/users");
+      const res = await fetchWithAuth("/api/admin/users");
       if (res.ok) {
         const data = await res.json();
         setAdminUsers(data.users);
@@ -138,12 +168,12 @@ export default function Home() {
     } finally {
       setLoadingAdminUsers(false);
     }
-  }, []);
+  }, [fetchWithAuth]);
 
   const fetchAdminStats = useCallback(async () => {
     try {
       setLoadingAdminStats(true);
-      const res = await fetch("/api/admin/stats");
+      const res = await fetchWithAuth("/api/admin/stats");
       if (res.ok) {
         const data = await res.json();
         setAdminStats(data);
@@ -153,7 +183,7 @@ export default function Home() {
     } finally {
       setLoadingAdminStats(false);
     }
-  }, []);
+  }, [fetchWithAuth]);
 
   const handleDeleteUser = async (id: number) => {
     if (!confirm("Tem certeza que deseja remover este participante? Todos os palpites dele serão excluídos permanentemente.")) {
@@ -161,7 +191,7 @@ export default function Home() {
     }
     try {
       setDeletingUserId(id);
-      const res = await fetch(`/api/admin/users/${id}`, {
+      const res = await fetchWithAuth(`/api/admin/users/${id}`, {
         method: "DELETE",
       });
       const data = await res.json();
@@ -169,7 +199,7 @@ export default function Home() {
       
       await fetchAdminUsers();
       
-      const leaderboardRes = await fetch("/api/leaderboard");
+      const leaderboardRes = await fetchWithAuth("/api/leaderboard");
       if (leaderboardRes.ok) {
         const leaderboardData = await leaderboardRes.json();
         setLeaderboard(leaderboardData.leaderboard);
@@ -195,13 +225,37 @@ export default function Home() {
     try {
       setLoading(true);
 
-      const authRes = await fetch("/api/auth/sync");
-      if (!authRes.ok) throw new Error("Não foi possível autenticar o usuário.");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setUser(null);
+        setIsAdmin(false);
+        setLoading(false);
+        return;
+      }
+
+      const token = session.access_token;
+
+      const authRes = await fetch("/api/auth/sync", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      if (!authRes.ok) {
+        await supabase.auth.signOut();
+        setUser(null);
+        setIsAdmin(false);
+        setLoading(false);
+        return;
+      }
+      
       const authData = await authRes.json();
       setUser(authData.user);
       setIsAdmin(authData.isAdmin || false);
 
-      const matchesRes = await fetch("/api/matches");
+      const matchesRes = await fetch("/api/matches", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       if (!matchesRes.ok) throw new Error("Erro ao carregar os jogos.");
       const matchesData = await matchesRes.json();
       setMatches(matchesData.matches);
@@ -221,7 +275,9 @@ export default function Home() {
       setPredictedScores(initialScores);
       setSocialPredictions(matchesData.socialPredictions || {});
 
-      const leaderboardRes = await fetch("/api/leaderboard");
+      const leaderboardRes = await fetch("/api/leaderboard", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       if (!leaderboardRes.ok) throw new Error("Erro ao carregar a classificação.");
       const leaderboardData = await leaderboardRes.json();
       setLeaderboard(leaderboardData.leaderboard);
@@ -244,7 +300,7 @@ export default function Home() {
     setPredictionFeedback((prev) => ({ ...prev, [matchId]: null as any }));
 
     try {
-      const res = await fetch("/api/predictions", {
+      const res = await fetchWithAuth("/api/predictions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -263,13 +319,13 @@ export default function Home() {
         [matchId]: { type: "success", text: "Salvo!" },
       }));
 
-      const matchesRes = await fetch("/api/matches");
+      const matchesRes = await fetchWithAuth("/api/matches");
       if (matchesRes.ok) {
         const matchesData = await matchesRes.json();
         setSocialPredictions(matchesData.socialPredictions || {});
       }
 
-      const leaderboardRes = await fetch("/api/leaderboard");
+      const leaderboardRes = await fetchWithAuth("/api/leaderboard");
       if (leaderboardRes.ok) {
         const leaderboardData = await leaderboardRes.json();
         setLeaderboard(leaderboardData.leaderboard);
@@ -292,7 +348,7 @@ export default function Home() {
     setSyncing(true);
     setSyncMessage(null);
     try {
-      const res = await fetch("/api/sync", { method: "POST" });
+      const res = await fetchWithAuth("/api/sync", { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Erro ao sincronizar resultados.");
       setSyncMessage({ type: "success", text: data.message });
@@ -374,6 +430,10 @@ export default function Home() {
     );
   }
 
+  if (!user) {
+    return <LoginForm onLoginSuccess={loadData} />;
+  }
+
   return (
     <div className="flex flex-col min-h-screen bg-[#0a1a0f] text-[#e8e8e8]">
 
@@ -425,11 +485,20 @@ export default function Home() {
             {/* User section */}
             <div className="flex items-center gap-3">
               {user && (
-                <span className="hidden sm:block text-sm font-semibold text-[#e8e8e8]">
-                  {user.displayName}
-                </span>
+                <>
+                  <span className="hidden sm:block text-sm font-semibold text-[#e8e8e8]">
+                    {user.displayName}
+                  </span>
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-red-400 hover:bg-red-900/10 hover:text-red-300 transition-all border border-red-900/20 cursor-pointer"
+                    title="Sair"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Sair</span>
+                  </button>
+                </>
               )}
-              <UserButton />
             </div>
           </div>
         </div>
@@ -1675,6 +1744,153 @@ export default function Home() {
       <footer className="py-6 px-4 border-t border-[#1a3d24] text-center text-xs text-[#6b7280] font-semibold mt-auto">
         Desenvolvido com carinho para o Bolão da Família Copa 2026.
       </footer>
+    </div>
+  );
+}
+
+function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      if (isLogin) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
+        onLoginSuccess();
+      } else {
+        if (!name.trim()) throw new Error("Por favor, preencha o seu nome.");
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              display_name: name.trim(),
+            },
+          },
+        });
+        if (error) throw error;
+        setMessage({
+          type: "success",
+          text: "Conta criada com sucesso! Você já pode fazer login ou confirmar o e-mail.",
+        });
+        setIsLogin(true);
+      }
+    } catch (error: any) {
+      setMessage({ type: "error", text: error.message || "Ocorreu um erro." });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-[#0a1a0f] text-[#e8e8e8] px-4">
+      <div className="w-full max-w-md bg-[#0d2214] border border-[#1a3d24] rounded-2xl p-6 sm:p-8 shadow-2xl">
+        <div className="flex flex-col items-center gap-3 mb-6">
+          <div className="p-3 bg-[#d4a017]/10 rounded-full border border-[#d4a017]/25 text-[#d4a017]">
+            <Trophy className="w-8 h-8" />
+          </div>
+          <h1 className="text-2xl font-extrabold text-[#d4a017] tracking-tight text-center">
+            BOLÃO DA FAMÍLIA COPA 2026
+          </h1>
+          <p className="text-sm text-[#9ca3af] text-center">
+            {isLogin
+              ? "Entre para salvar seus palpites e ver a classificação"
+              : "Crie sua conta para participar do bolão"}
+          </p>
+        </div>
+
+        {message && (
+          <div
+            className={`p-3 rounded-lg border text-sm mb-4 flex items-center gap-2 ${
+              message.type === "success"
+                ? "bg-[#1a3d24]/20 border-[#1a3d24] text-green-400"
+                : "bg-red-950/20 border-red-900/40 text-red-400"
+            }`}
+          >
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{message.text}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {!isLogin && (
+            <div>
+              <label className="block text-xs font-semibold text-[#9ca3af] mb-1.5 uppercase tracking-wider">
+                Seu Nome (como aparecerá no ranking)
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ex: Tio João, Luisa, Marcelo..."
+                required
+                className="w-full bg-[#08150c] border border-[#1a3d24] focus:border-[#d4a017] focus:ring-1 focus:ring-[#d4a017] rounded-lg px-4 py-2.5 text-sm outline-none text-[#e8e8e8] placeholder-[#4b5563] transition-all"
+              />
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-semibold text-[#9ca3af] mb-1.5 uppercase tracking-wider">
+              E-mail
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="seuemail@exemplo.com"
+              required
+              className="w-full bg-[#08150c] border border-[#1a3d24] focus:border-[#d4a017] focus:ring-1 focus:ring-[#d4a017] rounded-lg px-4 py-2.5 text-sm outline-none text-[#e8e8e8] placeholder-[#4b5563] transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-[#9ca3af] mb-1.5 uppercase tracking-wider">
+              Senha
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+              className="w-full bg-[#08150c] border border-[#1a3d24] focus:border-[#d4a017] focus:ring-1 focus:ring-[#d4a017] rounded-lg px-4 py-2.5 text-sm outline-none text-[#e8e8e8] placeholder-[#4b5563] transition-all"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-[#d4a017] hover:bg-[#b8860b] text-[#0a1a0f] disabled:bg-gray-600 disabled:text-gray-300 font-bold py-3 px-4 rounded-lg text-sm transition-all duration-200 cursor-pointer shadow-lg shadow-[#d4a017]/10"
+          >
+            {loading ? "Processando..." : isLogin ? "Entrar" : "Criar Conta"}
+          </button>
+        </form>
+
+        <div className="mt-6 pt-6 border-t border-[#1a3d24] text-center">
+          <button
+            type="button"
+            onClick={() => {
+              setIsLogin(!isLogin);
+              setMessage(null);
+            }}
+            className="text-sm text-[#9ca3af] hover:text-[#d4a017] transition-all cursor-pointer font-medium"
+          >
+            {isLogin ? "Não tem conta? Crie uma aqui" : "Já tem conta? Faça login"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

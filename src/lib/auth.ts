@@ -1,4 +1,4 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { createClient } from "@supabase/supabase-js";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -10,44 +10,69 @@ const getAdminIds = () => {
   return new Set(adminIdsStr.split(",").map(id => id.trim()).filter(Boolean));
 };
 
-export async function getOrCreateLocalUser() {
-  const { userId: clerkUserId } = await auth();
-  if (!clerkUserId) return null;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "";
 
-  // Check db
-  let localUser = await db.query.users.findFirst({
-    where: eq(users.clerkUserId, clerkUserId),
-  });
+export const supabaseServer = createClient(supabaseUrl, supabaseAnonKey);
 
-  if (!localUser) {
-    const userProfile = await currentUser();
-    const displayName = userProfile?.firstName 
-      ? `${userProfile.firstName} ${userProfile.lastName || ""}`.trim() 
-      : "Participante";
-      
-    try {
-      const result = await db.insert(users)
-        .values({
-          clerkUserId,
-          displayName,
-        })
-        .onConflictDoUpdate({
-          target: users.clerkUserId,
-          set: { displayName }
-        })
-        .returning();
-      
-      localUser = result[0];
-    } catch (error) {
-      // Fallback in case of concurrent insert conflict
-      console.warn("[Auth] Concurrent user sync detected, reloading profile:", error);
-      localUser = await db.query.users.findFirst({
-        where: eq(users.clerkUserId, clerkUserId),
-      });
-    }
+export async function getOrCreateLocalUser(req?: Request) {
+  if (!req) return null;
+  
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return null;
   }
+  
+  const token = authHeader.split(" ")[1];
+  if (!token) return null;
 
-  return localUser;
+  try {
+    const { data: { user: supabaseUser }, error } = await supabaseServer.auth.getUser(token);
+    
+    if (error || !supabaseUser) {
+      console.error("[Auth] Supabase validation error:", error);
+      return null;
+    }
+
+    const clerkUserId = supabaseUser.id; // Map Supabase user ID to clerkUserId column to avoid schema changes
+
+    // Check db
+    let localUser = await db.query.users.findFirst({
+      where: eq(users.clerkUserId, clerkUserId),
+    });
+
+    if (!localUser) {
+      const displayName = supabaseUser.user_metadata?.display_name 
+        || supabaseUser.user_metadata?.first_name 
+        || supabaseUser.email?.split("@")[0] 
+        || "Participante";
+        
+      try {
+        const result = await db.insert(users)
+          .values({
+            clerkUserId,
+            displayName,
+          })
+          .onConflictDoUpdate({
+            target: users.clerkUserId,
+            set: { displayName }
+          })
+          .returning();
+        
+        localUser = result[0];
+      } catch (error) {
+        console.warn("[Auth] Concurrent user sync detected, reloading profile:", error);
+        localUser = await db.query.users.findFirst({
+          where: eq(users.clerkUserId, clerkUserId),
+        });
+      }
+    }
+
+    return localUser;
+  } catch (err) {
+    console.error("[Auth] Error validating token:", err);
+    return null;
+  }
 }
 
 export async function isAdmin(clerkUserId: string | null): Promise<boolean> {

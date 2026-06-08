@@ -2,17 +2,11 @@
 import { expect, test, vi, beforeEach } from "vitest";
 import { GET } from "./route";
 import { db } from "@/db";
-import { isAdmin } from "@/lib/auth";
-import { auth } from "@clerk/nextjs/server";
-
-vi.mock("@clerk/nextjs/server", () => {
-  return {
-    auth: vi.fn(),
-  };
-});
+import { getOrCreateLocalUser, isAdmin } from "@/lib/auth";
 
 vi.mock("@/lib/auth", () => {
   return {
+    getOrCreateLocalUser: vi.fn(),
     isAdmin: vi.fn(),
   };
 });
@@ -30,17 +24,18 @@ beforeEach(() => {
 });
 
 test("GET /api/admin/stats returns 403 if user is not admin", async () => {
-  vi.mocked(auth).mockResolvedValue({ userId: "non_admin" } as any);
+  vi.mocked(getOrCreateLocalUser).mockResolvedValue({ id: 1, clerkUserId: "non_admin", displayName: "User" } as any);
   vi.mocked(isAdmin).mockResolvedValue(false);
 
-  const response = await GET();
+  const req = new Request("http://localhost/api/admin/stats");
+  const response = await GET(req);
   expect(response.status).toBe(403);
   const data = await response.json();
   expect(data.error).toBe("Forbidden");
 });
 
 test("GET /api/admin/stats returns correct stats structure when user is admin", async () => {
-  vi.mocked(auth).mockResolvedValue({ userId: "admin" } as any);
+  vi.mocked(getOrCreateLocalUser).mockResolvedValue({ id: 1, clerkUserId: "admin", displayName: "Admin" } as any);
   vi.mocked(isAdmin).mockResolvedValue(true);
 
   const createMockChain = (resolvedValue: any) => {
@@ -81,7 +76,8 @@ test("GET /api/admin/stats returns correct stats structure when user is admin", 
       { matchId: 6, homeTeamName: "Mexico", awayTeamName: "USA", utcDate: new Date("2026-06-15T12:00:00Z"), predictionCount: 0 },
     ])); // 8. Match predictions
 
-  const response = await GET();
+  const req = new Request("http://localhost/api/admin/stats");
+  const response = await GET(req);
   expect(response.status).toBe(200);
   const data = await response.json();
 

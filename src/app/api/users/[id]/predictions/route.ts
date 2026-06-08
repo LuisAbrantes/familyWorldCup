@@ -9,7 +9,7 @@ export async function GET(
   props: { params: Promise<{ id: string }> }
 ) {
   try {
-    const localUser = await getOrCreateLocalUser();
+    const localUser = await getOrCreateLocalUser(request);
     if (!localUser) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

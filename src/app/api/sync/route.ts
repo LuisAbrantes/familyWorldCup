@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
-import { isAdmin } from "@/lib/auth";
+import { getOrCreateLocalUser, isAdmin } from "@/lib/auth";
 import { syncMatches } from "@/lib/syncService";
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
-    const { userId } = await auth();
-    const isUserAdmin = await isAdmin(userId);
+    const localUser = await getOrCreateLocalUser(req);
+    const isUserAdmin = localUser ? await isAdmin(localUser.clerkUserId) : false;
 
-    if (!isUserAdmin) {
+    if (!localUser || !isUserAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

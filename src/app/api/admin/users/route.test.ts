@@ -2,17 +2,11 @@
 import { expect, test, vi, beforeEach } from "vitest";
 import { GET } from "./route";
 import { db } from "@/db";
-import { isAdmin } from "@/lib/auth";
-import { auth } from "@clerk/nextjs/server";
-
-vi.mock("@clerk/nextjs/server", () => {
-  return {
-    auth: vi.fn(),
-  };
-});
+import { getOrCreateLocalUser, isAdmin } from "@/lib/auth";
 
 vi.mock("@/lib/auth", () => {
   return {
+    getOrCreateLocalUser: vi.fn(),
     isAdmin: vi.fn(),
   };
 });
@@ -30,17 +24,18 @@ beforeEach(() => {
 });
 
 test("GET /api/admin/users returns 403 if user is not an admin", async () => {
-  vi.mocked(auth).mockResolvedValue({ userId: "non_admin" } as any);
+  vi.mocked(getOrCreateLocalUser).mockResolvedValue({ id: 1, clerkUserId: "non_admin", displayName: "User" } as any);
   vi.mocked(isAdmin).mockResolvedValue(false);
 
-  const response = await GET();
+  const req = new Request("http://localhost/api/admin/users");
+  const response = await GET(req);
   expect(response.status).toBe(403);
   const data = await response.json();
   expect(data.error).toBe("Forbidden");
 });
 
 test("GET /api/admin/users returns user list when user is admin", async () => {
-  vi.mocked(auth).mockResolvedValue({ userId: "admin" } as any);
+  vi.mocked(getOrCreateLocalUser).mockResolvedValue({ id: 1, clerkUserId: "admin", displayName: "Admin" } as any);
   vi.mocked(isAdmin).mockResolvedValue(true);
 
   const mockRawUsers = [
@@ -75,7 +70,8 @@ test("GET /api/admin/users returns user list when user is admin", async () => {
   const mockFrom = vi.fn().mockReturnValue({ leftJoin: mockLeftJoin });
   vi.mocked(db.select).mockReturnValue({ from: mockFrom } as any);
 
-  const response = await GET();
+  const req = new Request("http://localhost/api/admin/users");
+  const response = await GET(req);
   expect(response.status).toBe(200);
   const data = await response.json();
 

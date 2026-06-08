@@ -2,17 +2,11 @@
 import { expect, test, vi, beforeEach } from "vitest";
 import { DELETE } from "./route";
 import { db } from "@/db";
-import { isAdmin } from "@/lib/auth";
-import { auth } from "@clerk/nextjs/server";
-
-vi.mock("@clerk/nextjs/server", () => {
-  return {
-    auth: vi.fn(),
-  };
-});
+import { getOrCreateLocalUser, isAdmin } from "@/lib/auth";
 
 vi.mock("@/lib/auth", () => {
   return {
+    getOrCreateLocalUser: vi.fn(),
     isAdmin: vi.fn(),
   };
 });
@@ -35,7 +29,7 @@ beforeEach(() => {
 });
 
 test("DELETE /api/admin/users/[id] returns 403 if user is not admin", async () => {
-  vi.mocked(auth).mockResolvedValue({ userId: "non_admin" } as any);
+  vi.mocked(getOrCreateLocalUser).mockResolvedValue({ id: 1, clerkUserId: "non_admin", displayName: "User" } as any);
   vi.mocked(isAdmin).mockResolvedValue(false);
 
   const response = await DELETE(new Request("http://localhost/api/admin/users/123"), {
@@ -48,7 +42,7 @@ test("DELETE /api/admin/users/[id] returns 403 if user is not admin", async () =
 });
 
 test("DELETE /api/admin/users/[id] returns 400 if user tries to delete themselves", async () => {
-  vi.mocked(auth).mockResolvedValue({ userId: "admin_1" } as any);
+  vi.mocked(getOrCreateLocalUser).mockResolvedValue({ id: 1, clerkUserId: "admin_1", displayName: "Luis" } as any);
   vi.mocked(isAdmin).mockResolvedValue(true);
   
   vi.mocked(db.query.users.findFirst).mockResolvedValue({
@@ -67,7 +61,7 @@ test("DELETE /api/admin/users/[id] returns 400 if user tries to delete themselve
 });
 
 test("DELETE /api/admin/users/[id] deletes user if admin and not deleting themselves", async () => {
-  vi.mocked(auth).mockResolvedValue({ userId: "admin_1" } as any);
+  vi.mocked(getOrCreateLocalUser).mockResolvedValue({ id: 1, clerkUserId: "admin_1", displayName: "Luis" } as any);
   vi.mocked(isAdmin).mockResolvedValue(true);
   
   vi.mocked(db.query.users.findFirst).mockResolvedValue({

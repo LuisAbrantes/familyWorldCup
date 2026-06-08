@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 
 export async function POST(req: Request) {
   try {
-    const localUser = await getOrCreateLocalUser();
+    const localUser = await getOrCreateLocalUser(req);
     if (!localUser) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
