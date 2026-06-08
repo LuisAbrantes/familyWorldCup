@@ -1130,7 +1130,9 @@ export default function Home() {
                             <div className="text-xs text-[#9ca3af]">
                               Participantes:{" "}
                               <span className="font-bold text-[#e8e8e8]">
-                                {room.memberCount ?? 1} / {room.maxMembers ?? 15}
+                                {room.maxMembers >= 99999
+                                  ? `${room.memberCount ?? 1} / Ilimitado`
+                                  : `${room.memberCount ?? 1} / ${room.maxMembers ?? 15}`}
                               </span>
                             </div>
                           </div>
