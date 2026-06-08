@@ -1230,7 +1230,7 @@ export default function Home() {
                         Adquira o seu grupo de forma automática ou compre direto no Pix pelo WhatsApp!
                       </div>
                       <a
-                        href="https://buy.stripe.com/eVq4gBgHJ4u63XE5RD28802"
+                        href={`https://buy.stripe.com/eVq4gBgHJ4u63XE5RD28802?prefilled_email=${encodeURIComponent(user?.email || "")}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="w-full bg-[#d4a017] hover:bg-[#b8860b] text-[#0a1a0f] py-2.5 rounded-lg text-xs font-black uppercase tracking-wide text-center transition-all block shadow-lg shadow-[#d4a017]/10 cursor-pointer"
