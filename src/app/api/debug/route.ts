@@ -8,7 +8,15 @@ export async function GET() {
     const dbUsers = await db.select().from(users).limit(1);
     dbStatus = `SUCCESS: Connected successfully, users found: ${dbUsers.length}`;
   } catch (err: any) {
-    dbStatus = `ERROR: Connection failed. Message: ${err?.message || err}`;
+    dbStatus = JSON.stringify({
+      name: err?.name || "Unknown",
+      message: err?.message || String(err),
+      code: err?.code || null,
+      severity: err?.severity || null,
+      detail: err?.detail || null,
+      hint: err?.hint || null,
+      stack: err?.stack || null
+    }, null, 2);
   }
 
   return NextResponse.json({
