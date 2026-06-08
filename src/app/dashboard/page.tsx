@@ -2695,13 +2695,13 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
   };
 
   return (
-    <div className="flex min-h-screen w-full bg-[#051109] text-[#e8e8e8]">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#051109] text-[#e8e8e8]">
       {/* Left Column: Premium visual column dedicated to Seleção Brasileira and World Cup history */}
-      <div className="hidden lg:flex w-1/2 relative flex-col justify-between p-12 overflow-hidden bg-[#040e07] border-r border-[#13311a]">
-        {/* Background Image: Uniform/travel suit of Brazilian squad with high contrast */}
+      <div className="hidden lg:flex w-1/2 h-full relative flex-col justify-between p-12 overflow-hidden bg-[#040e07] border-r border-[#13311a]">
+        {/* Background Image: Reverted to the golden trophy banner */}
         <img 
-          src="/selecao_brasileira.webp" 
-          alt="Seleção Brasileira Copa do Mundo" 
+          src="/world_cup_banner.png" 
+          alt="World Cup Golden Trophy Banner" 
           className="absolute inset-0 w-full h-full object-cover opacity-35 scale-100 hover:scale-105 transition-all duration-[12s] ease-out brightness-75 saturate-[0.85]"
         />
         
@@ -2778,7 +2778,7 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
       </div>
 
       {/* Right Column: Immersive form column designed for full height integration */}
-      <div className="w-full lg:w-1/2 flex flex-col justify-between p-8 sm:p-12 lg:p-16 bg-[#06180c] border-l border-[#13311a] relative overflow-y-auto min-h-screen">
+      <div className="w-full lg:w-1/2 h-full flex flex-col justify-between p-8 sm:p-12 lg:p-16 bg-[#06180c] border-l border-[#13311a] relative overflow-y-auto">
         {/* Glow backdrop elements */}
         <div className="absolute top-[-5%] right-[-5%] w-[350px] h-[350px] rounded-full bg-emerald-500/5 blur-[120px] pointer-events-none" />
         <div className="absolute bottom-[-5%] left-[-5%] w-[350px] h-[350px] rounded-full bg-[#d4a017]/5 blur-[120px] pointer-events-none" />
@@ -2941,7 +2941,7 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
         {/* Bottom decorative stats / info */}
         <div className="border-t border-[#13311a]/70 pt-5 w-full z-10 text-center lg:text-left">
           <p className="text-[10px] text-[#6b7280] leading-relaxed">
-            Plataforma 100% gratuita para diversão familiar e entre amigos. Os palpites podem ser alterados até o pontapé inicial de cada jogo. Boa sorte!
+            Plataforma oficial para diversão familiar e entre amigos. Os palpites podem ser alterados até o pontapé inicial de cada jogo. Boa sorte!
           </p>
         </div>
       </div>
