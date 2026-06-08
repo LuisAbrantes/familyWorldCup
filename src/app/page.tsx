@@ -88,7 +88,7 @@ export default function LandingPage() {
         </div>
 
         <h1 className="text-4xl sm:text-6xl md:text-7xl font-black italic text-gold-gradient tracking-tight leading-tight max-w-4xl uppercase">
-          Organize o bolão da Copa sem planilhas ou dor de cabeça
+          Organize o seu bolão da Copa e compita com seus amigos
         </h1>
         <p className="mt-6 text-[#9ca3af] text-base sm:text-xl max-w-2xl leading-relaxed">
           Crie seu grupo privado, convide a galera e deixe que a nossa plataforma cuide de atualizar os placares, calcular os pontos e atualizar a classificação na hora!
