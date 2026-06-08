@@ -73,6 +73,71 @@ function stageLabel(stage: string): string {
   return map[stage] || stage.replace(/_/g, " ");
 }
 
+const flagMapping: Record<string, string> = {
+  "Algeria": "dz",
+  "Argentina": "ar",
+  "Australia": "au",
+  "Austria": "at",
+  "Belgium": "be",
+  "Bosnia-Herzegovina": "ba",
+  "Bosnia and Herzegovina": "ba",
+  "Brazil": "br",
+  "Canada": "ca",
+  "Cape Verde Islands": "cv",
+  "Cape Verde": "cv",
+  "Colombia": "co",
+  "Congo DR": "cd",
+  "DR Congo": "cd",
+  "Croatia": "hr",
+  "Curaçao": "cw",
+  "Czechia": "cz",
+  "Ecuador": "ec",
+  "Egypt": "eg",
+  "England": "gb-eng",
+  "France": "fr",
+  "Germany": "de",
+  "Ghana": "gh",
+  "Haiti": "ht",
+  "Iran": "ir",
+  "Iraq": "iq",
+  "Ivory Coast": "ci",
+  "Côte d'Ivoire": "ci",
+  "Japan": "jp",
+  "Jordan": "jo",
+  "Mexico": "mx",
+  "Morocco": "ma",
+  "Netherlands": "nl",
+  "New Zealand": "nz",
+  "Norway": "no",
+  "Panama": "pa",
+  "Paraguay": "py",
+  "Portugal": "pt",
+  "Qatar": "qa",
+  "Saudi Arabia": "sa",
+  "Scotland": "gb-sct",
+  "Senegal": "sn",
+  "South Africa": "za",
+  "South Korea": "kr",
+  "Korea Republic": "kr",
+  "Spain": "es",
+  "Sweden": "se",
+  "Switzerland": "ch",
+  "Tunisia": "tn",
+  "Turkey": "tr",
+  "United States": "us",
+  "USA": "us",
+  "Uruguay": "uy",
+  "Uzbekistan": "uz"
+};
+
+function getTeamCrestUrl(teamName: string, originalUrl: string | null): string | null {
+  const code = flagMapping[teamName];
+  if (code) {
+    return `https://flagcdn.com/w80/${code}.png`;
+  }
+  return originalUrl;
+}
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState<TabKey>("inicio");
   const [user, setUser] = useState<any>(null);
@@ -640,8 +705,8 @@ export default function Home() {
                         {/* Home */}
                         <div className="flex flex-col items-center gap-2 flex-1">
                           <div className="w-14 h-14 rounded-lg bg-[#0a1a0f] border border-[#1a3d24] flex items-center justify-center p-1.5 overflow-hidden">
-                            {match.homeTeamCrest ? (
-                              <img src={match.homeTeamCrest} alt={match.homeTeamName} className="w-full h-full object-contain" />
+                            {getTeamCrestUrl(match.homeTeamName, match.homeTeamCrest) ? (
+                              <img src={getTeamCrestUrl(match.homeTeamName, match.homeTeamCrest) || ""} alt={match.homeTeamName} className="w-full h-full object-contain" />
                             ) : (
                               <User className="w-6 h-6 text-[#6b7280]" />
                             )}
@@ -655,8 +720,8 @@ export default function Home() {
                         {/* Away */}
                         <div className="flex flex-col items-center gap-2 flex-1">
                           <div className="w-14 h-14 rounded-lg bg-[#0a1a0f] border border-[#1a3d24] flex items-center justify-center p-1.5 overflow-hidden">
-                            {match.awayTeamCrest ? (
-                              <img src={match.awayTeamCrest} alt={match.awayTeamName} className="w-full h-full object-contain" />
+                            {getTeamCrestUrl(match.awayTeamName, match.awayTeamCrest) ? (
+                              <img src={getTeamCrestUrl(match.awayTeamName, match.awayTeamCrest) || ""} alt={match.awayTeamName} className="w-full h-full object-contain" />
                             ) : (
                               <User className="w-6 h-6 text-[#6b7280]" />
                             )}
@@ -800,8 +865,8 @@ export default function Home() {
                     <div className="flex items-center justify-center gap-6">
                       <div className="flex flex-col items-center gap-2 flex-1">
                         <div className="w-14 h-14 rounded-lg bg-[#0a1a0f] border border-[#1a3d24] flex items-center justify-center p-1.5 overflow-hidden">
-                          {match.homeTeamCrest ? (
-                            <img src={match.homeTeamCrest} alt={match.homeTeamName} className="w-full h-full object-contain" />
+                          {getTeamCrestUrl(match.homeTeamName, match.homeTeamCrest) ? (
+                            <img src={getTeamCrestUrl(match.homeTeamName, match.homeTeamCrest) || ""} alt={match.homeTeamName} className="w-full h-full object-contain" />
                           ) : (
                             <User className="w-6 h-6 text-[#6b7280]" />
                           )}
@@ -825,8 +890,8 @@ export default function Home() {
 
                       <div className="flex flex-col items-center gap-2 flex-1">
                         <div className="w-14 h-14 rounded-lg bg-[#0a1a0f] border border-[#1a3d24] flex items-center justify-center p-1.5 overflow-hidden">
-                          {match.awayTeamCrest ? (
-                            <img src={match.awayTeamCrest} alt={match.awayTeamName} className="w-full h-full object-contain" />
+                          {getTeamCrestUrl(match.awayTeamName, match.awayTeamCrest) ? (
+                            <img src={getTeamCrestUrl(match.awayTeamName, match.awayTeamCrest) || ""} alt={match.awayTeamName} className="w-full h-full object-contain" />
                           ) : (
                             <User className="w-6 h-6 text-[#6b7280]" />
                           )}
@@ -1048,8 +1113,8 @@ export default function Home() {
                         <div className="flex items-center gap-2.5 flex-1 justify-end">
                           <span className="text-sm font-bold text-[#e8e8e8] text-right">{match.homeTeamName}</span>
                           <div className="w-10 h-10 rounded-lg bg-[#0a1a0f] border border-[#1a3d24] flex items-center justify-center p-1 overflow-hidden shrink-0">
-                            {match.homeTeamCrest ? (
-                              <img src={match.homeTeamCrest} alt={match.homeTeamName} className="w-full h-full object-contain" />
+                            {getTeamCrestUrl(match.homeTeamName, match.homeTeamCrest) ? (
+                              <img src={getTeamCrestUrl(match.homeTeamName, match.homeTeamCrest) || ""} alt={match.homeTeamName} className="w-full h-full object-contain" />
                             ) : (
                               <User className="w-5 h-5 text-[#6b7280]" />
                             )}
@@ -1080,8 +1145,8 @@ export default function Home() {
 
                         <div className="flex items-center gap-2.5 flex-1">
                           <div className="w-10 h-10 rounded-lg bg-[#0a1a0f] border border-[#1a3d24] flex items-center justify-center p-1 overflow-hidden shrink-0">
-                            {match.awayTeamCrest ? (
-                              <img src={match.awayTeamCrest} alt={match.awayTeamName} className="w-full h-full object-contain" />
+                            {getTeamCrestUrl(match.awayTeamName, match.awayTeamCrest) ? (
+                              <img src={getTeamCrestUrl(match.awayTeamName, match.awayTeamCrest) || ""} alt={match.awayTeamName} className="w-full h-full object-contain" />
                             ) : (
                               <User className="w-5 h-5 text-[#6b7280]" />
                             )}
@@ -1678,8 +1743,8 @@ export default function Home() {
                             <div className="flex items-center gap-2">
                               {/* Home Crest */}
                               <div className="w-5 h-5 flex items-center justify-center">
-                                {p.homeTeamCrest ? (
-                                  <img src={p.homeTeamCrest} alt={p.homeTeamName} className="w-full h-full object-contain" />
+                                {getTeamCrestUrl(p.homeTeamName, p.homeTeamCrest) ? (
+                                  <img src={getTeamCrestUrl(p.homeTeamName, p.homeTeamCrest) || ""} alt={p.homeTeamName} className="w-full h-full object-contain" />
                                 ) : (
                                   <div className="w-1.5 h-1.5 rounded-full bg-[#6b7280]" />
                                 )}
@@ -1689,8 +1754,8 @@ export default function Home() {
                               <span className="text-xs font-bold text-[#e8e8e8]">{p.awayTeamName}</span>
                               {/* Away Crest */}
                               <div className="w-5 h-5 flex items-center justify-center">
-                                {p.awayTeamCrest ? (
-                                  <img src={p.awayTeamCrest} alt={p.awayTeamName} className="w-full h-full object-contain" />
+                                {getTeamCrestUrl(p.awayTeamName, p.awayTeamCrest) ? (
+                                  <img src={getTeamCrestUrl(p.awayTeamName, p.awayTeamCrest) || ""} alt={p.awayTeamName} className="w-full h-full object-contain" />
                                 ) : (
                                   <div className="w-1.5 h-1.5 rounded-full bg-[#6b7280]" />
                                 )}
