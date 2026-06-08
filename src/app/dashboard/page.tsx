@@ -28,6 +28,8 @@ import {
   Eye,
   EyeOff,
   HelpCircle,
+  Menu,
+  X,
 } from "lucide-react";
 
 interface Match {
@@ -143,6 +145,7 @@ function getTeamCrestUrl(teamName: string, originalUrl: string | null): string |
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<TabKey>("inicio");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isCreator, setIsCreator] = useState(false);
@@ -873,19 +876,28 @@ export default function Home() {
                   </span>
                   <button
                     onClick={() => { setTutorialStep(0); setShowTutorial(true); }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#d4a017] hover:bg-[#d4a017]/10 hover:text-[#e8e8e8] transition-all border border-[#d4a017]/20 cursor-pointer"
+                    className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#d4a017] hover:bg-[#d4a017]/10 hover:text-[#e8e8e8] transition-all border border-[#d4a017]/20 cursor-pointer"
                     title="Ver Tutorial"
                   >
                     <HelpCircle className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Como Usar</span>
+                    <span>Como Usar</span>
                   </button>
                   <button
                     onClick={handleLogout}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-red-400 hover:bg-red-900/10 hover:text-red-300 transition-all border border-red-900/20 cursor-pointer"
+                    className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-red-400 hover:bg-red-900/10 hover:text-red-300 transition-all border border-red-900/20 cursor-pointer"
                     title="Sair"
                   >
                     <LogOut className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Sair</span>
+                    <span>Sair</span>
+                  </button>
+
+                  {/* Hamburger Menu Button */}
+                  <button
+                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    className="md:hidden flex items-center justify-center p-2 rounded-lg text-[#9ca3af] hover:text-[#e8e8e8] hover:bg-[#1a3d24]/60 transition-all cursor-pointer"
+                    aria-label="Toggle menu"
+                  >
+                    {isMobileMenuOpen ? <X className="w-6 h-6 text-[#d4a017]" /> : <Menu className="w-6 h-6" />}
                   </button>
                 </>
               )}
@@ -893,34 +905,78 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Mobile Nav */}
-        <nav className="md:hidden flex items-center gap-1 px-4 pb-3 overflow-x-auto">
-          {navItems.map((item) => (
-            <button
-              key={item.key}
-              onClick={() => setActiveTab(item.key)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                activeTab === item.key
-                  ? "text-[#d4a017] bg-[#d4a017]/10"
-                  : "text-[#9ca3af]"
-              }`}
-            >
-              {item.icon}
-              {item.label}
-            </button>
-          ))}
-          {isAdmin && (
-            <button
-              onClick={() => setActiveTab("admin")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                activeTab === "admin" ? "text-[#d4a017] bg-[#d4a017]/10" : "text-[#9ca3af]"
-              }`}
-            >
-              <Settings className="w-4 h-4" />
-              Admin
-            </button>
-          )}
-        </nav>
+        {/* Mobile Menu Dropdown Panel */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden bg-[#0d2214]/98 backdrop-blur-lg border-t border-[#1a3d24]/80 px-4 py-4 space-y-4 shadow-2xl animate-fadeIn">
+            <div className="flex flex-col gap-2">
+              {navItems.map((item) => (
+                <button
+                  key={item.key}
+                  onClick={() => {
+                    setActiveTab(item.key);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+                    activeTab === item.key
+                      ? "text-[#d4a017] bg-[#d4a017]/15 border border-[#d4a017]/25"
+                      : "text-[#9ca3af] hover:text-[#e8e8e8] hover:bg-[#1a3d24]/40"
+                  }`}
+                >
+                  {item.icon}
+                  {item.label}
+                </button>
+              ))}
+              {isAdmin && (
+                <button
+                  onClick={() => {
+                    setActiveTab("admin");
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+                    activeTab === "admin"
+                      ? "text-[#d4a017] bg-[#d4a017]/15 border border-[#d4a017]/25"
+                      : "text-[#9ca3af] hover:text-[#e8e8e8] hover:bg-[#1a3d24]/40"
+                  }`}
+                >
+                  <Settings className="w-4 h-4" />
+                  Admin
+                </button>
+              )}
+            </div>
+
+            {/* Mobile User Info & Actions */}
+            <div className="border-t border-[#1a3d24]/60 pt-4 flex flex-col gap-3">
+              <div className="flex items-center justify-between px-4">
+                <span className="text-[10px] text-[#6b7280] font-black uppercase tracking-wider">Usuário Logado</span>
+                <span className="text-sm font-bold text-[#e8e8e8]">{user?.displayName}</span>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => {
+                    setTutorialStep(0);
+                    setShowTutorial(true);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold text-[#d4a017] border border-[#d4a017]/25 hover:bg-[#d4a017]/10 transition-all cursor-pointer"
+                >
+                  <HelpCircle className="w-4 h-4" />
+                  Como Usar
+                </button>
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold text-red-400 border border-red-900/25 hover:bg-red-950/20 transition-all cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Sair
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* ─── Main Content ─── */}
