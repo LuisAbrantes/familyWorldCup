@@ -19,13 +19,28 @@ export async function GET(req: Request) {
         creatorUserId: rooms.creatorUserId,
         createdAt: rooms.createdAt,
         role: roomMembers.role,
+        maxMembers: rooms.maxMembers,
       })
       .from(rooms)
       .innerJoin(roomMembers, eq(rooms.id, roomMembers.roomId))
       .where(eq(roomMembers.userId, localUser.id))
       .orderBy(rooms.createdAt);
 
-    return NextResponse.json({ rooms: userRooms });
+    // Fetch member count for each room
+    const roomsWithCounts = await Promise.all(
+      userRooms.map(async (r) => {
+        const members = await db
+          .select()
+          .from(roomMembers)
+          .where(eq(roomMembers.roomId, r.id));
+        return {
+          ...r,
+          memberCount: members.length,
+        };
+      })
+    );
+
+    return NextResponse.json({ rooms: roomsWithCounts });
   } catch (error: any) {
     console.error("GET /api/rooms error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

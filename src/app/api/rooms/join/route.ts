@@ -36,6 +36,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, room, message: "Você já faz parte deste grupo!" });
     }
 
+    // Check members count limit
+    const currentMembers = await db.select().from(roomMembers).where(eq(roomMembers.roomId, room.id));
+    if (currentMembers.length >= room.maxMembers) {
+      return NextResponse.json({
+        error: `Este grupo atingiu o limite máximo de participantes (${room.maxMembers}). Entre em contato com o dono do grupo para solicitar o upgrade.`
+      }, { status: 403 });
+    }
+
     // Add user as a member
     await db.insert(roomMembers).values({
       roomId: room.id,

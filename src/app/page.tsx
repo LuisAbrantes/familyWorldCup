@@ -887,11 +887,19 @@ export default function Home() {
                             <Trophy className={`w-5 h-5 ${isActive ? "text-[#d4a017]" : "text-[#9ca3af]"}`} />
                           </div>
 
-                          <div className="text-sm text-[#9ca3af]">
-                            Código de Convite:{" "}
-                            <span className="font-mono font-bold text-[#e8e8e8] bg-[#1a3d24]/60 px-2 py-0.5 rounded border border-[#2d5c38]">
-                              {room.inviteCode}
-                            </span>
+                          <div className="text-sm text-[#9ca3af] flex flex-col gap-1.5">
+                            <div>
+                              Código de Convite:{" "}
+                              <span className="font-mono font-bold text-[#e8e8e8] bg-[#1a3d24]/60 px-2 py-0.5 rounded border border-[#2d5c38]">
+                                {room.inviteCode}
+                              </span>
+                            </div>
+                            <div className="text-xs text-[#9ca3af]">
+                              Participantes:{" "}
+                              <span className="font-bold text-[#e8e8e8]">
+                                {room.memberCount ?? 1} / {room.maxMembers ?? 10}
+                              </span>
+                            </div>
                           </div>
 
                           <div className="mt-auto pt-2 flex gap-2">

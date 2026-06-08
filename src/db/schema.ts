@@ -35,6 +35,7 @@ export const rooms = pgTable("rooms", {
   name: text("name").notNull(),
   inviteCode: text("invite_code").unique().notNull(), // 6 letter code
   creatorUserId: integer("creator_user_id").references(() => users.id).notNull(),
+  maxMembers: integer("max_members").default(10).notNull(), // default limit of 10 participants
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
