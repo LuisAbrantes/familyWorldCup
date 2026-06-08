@@ -144,6 +144,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<TabKey>("inicio");
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isCreator, setIsCreator] = useState(false);
   const [matches, setMatches] = useState<Match[]>([]);
   const [predictions, setPredictions] = useState<Record<number, Prediction>>({});
   const [socialPredictions, setSocialPredictions] = useState<any>({});
@@ -215,6 +216,7 @@ export default function Home() {
       await supabase.auth.signOut();
       setUser(null);
       setIsAdmin(false);
+      setIsCreator(false);
       setMatches([]);
       setLeaderboard([]);
       setPredictions({});
@@ -420,6 +422,7 @@ export default function Home() {
         await supabase.auth.signOut();
         setUser(null);
         setIsAdmin(false);
+        setIsCreator(false);
         setLoading(false);
         return;
       }
@@ -427,6 +430,7 @@ export default function Home() {
       const authData = await authRes.json();
       setUser(authData.user);
       setIsAdmin(authData.isAdmin || false);
+      setIsCreator(authData.isCreator || false);
 
       // Fetch user rooms
       const roomsRes = await fetch("/api/rooms", {
@@ -945,33 +949,55 @@ export default function Home() {
                 {/* Create Group */}
                 <div className="bg-[#0d2214]/60 border border-[#1a3d24] rounded-2xl p-6 flex flex-col gap-4">
                   <h3 className="font-extrabold text-[#e8e8e8]">Criar novo grupo</h3>
-                  <form onSubmit={handleCreateRoom} className="flex flex-col gap-3">
-                    <input
-                      type="text"
-                      placeholder="Nome do grupo (ex: Bolão da Firma)"
-                      value={newRoomName}
-                      onChange={(e) => setNewRoomName(e.target.value)}
-                      className="bg-[#0a1a0f] border border-[#2d5c38] rounded-lg px-3.5 py-2 text-sm text-[#e8e8e8] focus:outline-none focus:border-[#d4a017]"
-                    />
-                    <button
-                      type="submit"
-                      disabled={creatingRoom}
-                      className="w-full bg-[#d4a017] text-[#0a1a0f] hover:bg-[#b8860b] py-2 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                    >
-                      {creatingRoom ? "Criando..." : "Criar Grupo (R$15)"}
-                    </button>
-                  </form>
-                  <p className="text-[11px] text-[#9ca3af] leading-relaxed text-center">
-                    Deseja criar um grupo? Fale com o organizador no WhatsApp para cadastrar seu e-mail e liberar a criação do grupo!
-                  </p>
-                  <a
-                    href={`https://wa.me/5511999999999?text=Ol%C3%A1!%20Gostaria%20de%20criar%20um%20grupo%20no%20bol%C3%A3o.%20Meu%20e-mail%20cadastrado%20%C3%A9%3A%20${encodeURIComponent(user.email || "")}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full border border-green-600/40 text-green-400 bg-green-950/10 hover:bg-green-950/20 py-2 rounded-lg text-xs font-bold text-center transition-all block"
-                  >
-                    Solicitar Liberação no WhatsApp
-                  </a>
+                  {isCreator ? (
+                    <>
+                      <div className="text-[11px] px-2.5 py-1.5 rounded bg-emerald-950/40 text-emerald-400 border border-emerald-900/30 font-semibold mb-1">
+                        ✓ Seu e-mail está autorizado a criar grupos!
+                      </div>
+                      <form onSubmit={handleCreateRoom} className="flex flex-col gap-3">
+                        <input
+                          type="text"
+                          placeholder="Nome do grupo (ex: Bolão da Firma)"
+                          value={newRoomName}
+                          onChange={(e) => setNewRoomName(e.target.value)}
+                          className="bg-[#0a1a0f] border border-[#1a3d24] rounded-lg px-3.5 py-2 text-sm text-[#e8e8e8] focus:outline-none focus:border-[#d4a017]"
+                        />
+                        <button
+                          type="submit"
+                          disabled={creatingRoom}
+                          className="w-full bg-[#d4a017] text-[#0a1a0f] hover:bg-[#b8860b] py-2 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                        >
+                          {creatingRoom ? "Criando..." : "Criar Grupo"}
+                        </button>
+                      </form>
+                    </>
+                  ) : (
+                    <div className="flex flex-col gap-3.5 text-center">
+                      <div className="p-3.5 bg-[#d4a017]/10 rounded-xl border border-[#d4a017]/25 flex flex-col gap-2">
+                        <span className="text-[#d4a017] font-black text-sm uppercase tracking-wider flex items-center justify-center gap-1">
+                          👑 BOLÃO EXCLUSIVO
+                        </span>
+                        <p className="text-xs text-[#e8e8e8] leading-relaxed font-semibold">
+                          Monte um bolão particular para a sua firma, amigos ou família com ranking automatizado e palpites em tempo real!
+                        </p>
+                      </div>
+                      <div className="text-xs text-[#9ca3af] leading-relaxed">
+                        <span className="text-[#e8e8e8] font-bold block mb-1">Preço Sugerido:</span>
+                        R$ 2 por participante ou R$ 15 fixo por grupo (totalmente negociável direto com o administrador).
+                      </div>
+                      <div className="text-[11px] text-[#9ca3af] italic leading-normal">
+                        Fale comigo no WhatsApp para acertar o PIX e liberar a criação da sua sala agora mesmo!
+                      </div>
+                      <a
+                        href={`https://wa.me/5511999999999?text=Ol%C3%A1!%20Gostaria%20de%20criar%20uma%20sala%20no%20bol%C3%A3o.%20Meu%20e-mail%20cadastrado%20%C3%A9%3A%20${encodeURIComponent(user.email || "")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full border border-green-600/40 text-green-400 bg-green-950/20 hover:bg-green-950/40 py-2.5 rounded-lg text-xs font-bold text-center transition-all block shadow-lg shadow-green-950/20"
+                      >
+                        Chamar no WhatsApp & Liberar
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
