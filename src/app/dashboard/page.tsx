@@ -233,12 +233,20 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Admin tabs & states
-  const [activeAdminTab, setActiveAdminTab] = useState<"sync" | "users" | "stats" | "authorizations">("sync");
+  const [activeAdminTab, setActiveAdminTab] = useState<"sync" | "users" | "stats" | "authorizations" | "rooms">("rooms");
   const [adminUsers, setAdminUsers] = useState<any[]>([]);
   const [adminStats, setAdminStats] = useState<any>(null);
   const [loadingAdminUsers, setLoadingAdminUsers] = useState(false);
   const [loadingAdminStats, setLoadingAdminStats] = useState(false);
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
+
+  // Admin Rooms states
+  const [adminRoomsList, setAdminRoomsList] = useState<any[]>([]);
+  const [loadingAdminRooms, setLoadingAdminRooms] = useState(false);
+  const [editingAdminRoomId, setEditingAdminRoomId] = useState<number | null>(null);
+  const [editingAdminRoomName, setEditingAdminRoomName] = useState("");
+  const [editingAdminRoomMaxMembers, setEditingAdminRoomMaxMembers] = useState(15);
+  const [adminRoomsFeedback, setAdminRoomsFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // User profile modal states
   const [selectedProfileUser, setSelectedProfileUser] = useState<any | null>(null);
@@ -336,6 +344,75 @@ export default function Home() {
       setLoadingAuthEmails(false);
     }
   }, [fetchWithAuth]);
+
+  const fetchAdminRooms = useCallback(async () => {
+    try {
+      setLoadingAdminRooms(true);
+      const res = await fetchWithAuth("/api/admin/rooms");
+      if (res.ok) {
+        const data = await res.json();
+        setAdminRoomsList(data.rooms || []);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar salas para admin:", error);
+    } finally {
+      setLoadingAdminRooms(false);
+    }
+  }, [fetchWithAuth]);
+
+  const handleUpdateAdminRoom = async (roomId: number) => {
+    if (!editingAdminRoomName.trim() || editingAdminRoomName.trim().length < 3) {
+      alert("Nome do grupo deve ter pelo menos 3 caracteres.");
+      return;
+    }
+    if (editingAdminRoomMaxMembers <= 0) {
+      alert("Capacidade deve ser maior que 0.");
+      return;
+    }
+    
+    setAdminRoomsFeedback(null);
+    try {
+      const res = await fetchWithAuth("/api/admin/rooms", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomId,
+          name: editingAdminRoomName.trim(),
+          maxMembers: editingAdminRoomMaxMembers,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao atualizar sala.");
+      
+      setAdminRoomsFeedback({ type: "success", text: "Sala atualizada com sucesso!" });
+      setEditingAdminRoomId(null);
+      await fetchAdminRooms();
+      await loadData();
+    } catch (err: any) {
+      setAdminRoomsFeedback({ type: "error", text: err.message });
+    }
+  };
+
+  const handleDeleteAdminRoom = async (roomId: number, roomName: string) => {
+    if (!confirm(`Tem certeza que deseja excluir o grupo "${roomName}"? Esta ação excluirá permanentemente todos os participantes e palpites deste grupo e não poderá ser desfeita.`)) {
+      return;
+    }
+    
+    setAdminRoomsFeedback(null);
+    try {
+      const res = await fetchWithAuth(`/api/admin/rooms?roomId=${roomId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao excluir sala.");
+      
+      setAdminRoomsFeedback({ type: "success", text: "Sala excluída com sucesso!" });
+      await fetchAdminRooms();
+      await loadData();
+    } catch (err: any) {
+      setAdminRoomsFeedback({ type: "error", text: err.message });
+    }
+  };
 
   const handleAuthorizeEmail = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -452,9 +529,11 @@ export default function Home() {
         fetchAdminStats();
       } else if (activeAdminTab === "authorizations") {
         fetchAuthEmails();
+      } else if (activeAdminTab === "rooms") {
+        fetchAdminRooms();
       }
     }
-  }, [activeTab, activeAdminTab, isAdmin, fetchAdminUsers, fetchAdminStats, fetchAuthEmails]);
+  }, [activeTab, activeAdminTab, isAdmin, fetchAdminUsers, fetchAdminStats, fetchAuthEmails, fetchAdminRooms]);
 
   const loadRoomData = useCallback(async (roomId: number, token: string) => {
     try {
@@ -2080,6 +2159,17 @@ export default function Home() {
             {/* Sub-Navigation for Admin Panel */}
             <div className="flex border-b border-[#1a3d24] mb-2 flex-wrap">
               <button
+                onClick={() => setActiveAdminTab("rooms")}
+                className={`px-4 py-2 font-bold text-sm transition-all border-b-2 cursor-pointer flex items-center gap-2 ${
+                  activeAdminTab === "rooms"
+                    ? "border-[#d4a017] text-[#d4a017]"
+                    : "border-transparent text-[#9ca3af] hover:text-[#e8e8e8]"
+                }`}
+              >
+                <Trophy className="w-4 h-4" />
+                Salas/Grupos
+              </button>
+              <button
                 onClick={() => setActiveAdminTab("sync")}
                 className={`px-4 py-2 font-bold text-sm transition-all border-b-2 cursor-pointer flex items-center gap-2 ${
                   activeAdminTab === "sync"
@@ -2124,6 +2214,145 @@ export default function Home() {
                 Autorizações (Salas)
               </button>
             </div>
+
+            {/* Sub-tab: Rooms (Gerenciar Salas/Grupos) */}
+            {activeAdminTab === "rooms" && (
+              <div className="flex flex-col gap-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-bold text-[#e8e8e8] flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-[#d4a017]" />
+                    Gerenciar Salas e Capacidades
+                  </h3>
+                  <button
+                    onClick={fetchAdminRooms}
+                    className="text-xs font-bold text-[#d4a017] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <RefreshCw className="w-3 h-3" /> Atualizar Lista
+                  </button>
+                </div>
+
+                {adminRoomsFeedback && (
+                  <div
+                    className={`p-3 rounded-lg border text-sm flex items-center gap-2 ${
+                      adminRoomsFeedback.type === "success"
+                        ? "bg-emerald-950/20 border-emerald-900/50 text-emerald-400"
+                        : "bg-red-950/20 border-red-900/50 text-red-400"
+                    }`}
+                  >
+                    {adminRoomsFeedback.type === "success" ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                    <span>{adminRoomsFeedback.text}</span>
+                  </div>
+                )}
+
+                {loadingAdminRooms ? (
+                  <div className="flex justify-center py-8">
+                    <RefreshCw className="w-6 h-6 animate-spin text-[#d4a017]" />
+                  </div>
+                ) : adminRoomsList.length === 0 ? (
+                  <p className="text-sm text-[#9ca3af] py-4 text-center">Nenhuma sala cadastrada no sistema.</p>
+                ) : (
+                  <div className="overflow-x-auto rounded-xl border border-[#1a3d24]">
+                    <table className="w-full text-left border-collapse text-sm">
+                      <thead>
+                        <tr className="bg-[#0f2a18] text-[#9ca3af] font-bold border-b border-[#1a3d24]">
+                          <th className="p-4">Nome do Grupo</th>
+                          <th className="p-4">Código</th>
+                          <th className="p-4">Dono / E-mail</th>
+                          <th className="p-4">Membros / Limite</th>
+                          <th className="p-4 text-right">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#1a3d24]/50">
+                        {adminRoomsList.map((room) => {
+                          const isEditing = editingAdminRoomId === room.id;
+                          return (
+                            <tr key={room.id} className="hover:bg-[#0d2214]/40 transition-colors">
+                              <td className="p-4 font-bold text-[#e8e8e8]">
+                                {isEditing ? (
+                                  <input
+                                    type="text"
+                                    value={editingAdminRoomName}
+                                    onChange={(e) => setEditingAdminRoomName(e.target.value)}
+                                    className="bg-[#0a1a0f] border border-[#2d5c38] rounded px-2 py-1 text-xs text-[#e8e8e8] focus:outline-none w-48"
+                                  />
+                                ) : (
+                                  room.name
+                                )}
+                              </td>
+                              <td className="p-4 font-mono font-bold text-[#d4a017]">{room.inviteCode}</td>
+                              <td className="p-4 text-xs text-[#9ca3af]">
+                                <span className="font-bold text-[#e8e8e8] block">{room.creatorName || "N/A"}</span>
+                                <span>{room.creatorEmail || "N/A"}</span>
+                              </td>
+                              <td className="p-4 text-xs text-[#e8e8e8]">
+                                {isEditing ? (
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[#9ca3af]">{room.memberCount} /</span>
+                                    <input
+                                      type="number"
+                                      value={editingAdminRoomMaxMembers}
+                                      onChange={(e) => setEditingAdminRoomMaxMembers(parseInt(e.target.value, 10))}
+                                      className="bg-[#0a1a0f] border border-[#2d5c38] rounded px-2 py-1 text-xs text-[#e8e8e8] focus:outline-none w-20"
+                                      min={1}
+                                    />
+                                    <span className="text-[10px] text-[#9ca3af]">(99999 = Ilimitado)</span>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <span className="font-semibold">{room.memberCount}</span>
+                                    <span className="text-[#9ca3af]"> / </span>
+                                    <span className="font-semibold text-[#d4a017]">
+                                      {room.maxMembers >= 99999 ? "Ilimitado" : room.maxMembers}
+                                    </span>
+                                  </>
+                                )}
+                              </td>
+                              <td className="p-4 text-right">
+                                {isEditing ? (
+                                  <div className="flex gap-2 justify-end">
+                                    <button
+                                      onClick={() => handleUpdateAdminRoom(room.id)}
+                                      className="px-2.5 py-1 rounded bg-[#d4a017] hover:bg-[#b8860b] text-[#0a1a0f] text-xs font-bold transition-all cursor-pointer"
+                                    >
+                                      Salvar
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingAdminRoomId(null)}
+                                      className="px-2.5 py-1 rounded bg-[#1a3d24] hover:bg-[#2d5c38] text-[#e8e8e8] text-xs font-bold transition-all cursor-pointer"
+                                    >
+                                      Cancelar
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="flex gap-2 justify-end">
+                                    <button
+                                      onClick={() => {
+                                        setEditingAdminRoomId(room.id);
+                                        setEditingAdminRoomName(room.name);
+                                        setEditingAdminRoomMaxMembers(room.maxMembers);
+                                      }}
+                                      className="px-3 py-1.5 rounded-lg bg-[#1a3d24]/60 hover:bg-[#2d5c38] text-[#e8e8e8] text-xs font-bold transition-all cursor-pointer"
+                                    >
+                                      Editar
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteAdminRoom(room.id, room.name)}
+                                      className="px-3 py-1.5 rounded-lg bg-red-950/40 hover:bg-red-900/40 text-red-400 border border-red-900/50 text-xs font-bold transition-all cursor-pointer"
+                                    >
+                                      Excluir
+                                    </button>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Sub-tab: Sync */}
             {activeAdminTab === "sync" && (
