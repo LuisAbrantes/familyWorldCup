@@ -73,6 +73,26 @@ export async function getOrCreateLocalUserDetailed(req?: Request): Promise<{ use
           where: eq(users.clerkUserId, clerkUserId),
         });
       }
+    } else {
+      // Sync display name if it changed in Supabase metadata
+      const metaName = supabaseUser.user_metadata?.display_name 
+        || supabaseUser.user_metadata?.first_name 
+        || supabaseUser.email?.split("@")[0] 
+        || "Participante";
+        
+      if (localUser.displayName !== metaName) {
+        try {
+          const result = await db.update(users)
+            .set({ displayName: metaName })
+            .where(eq(users.clerkUserId, clerkUserId))
+            .returning();
+          if (result[0]) {
+            localUser = result[0];
+          }
+        } catch (updateErr) {
+          console.warn("[Auth] Failed to sync display name:", updateErr);
+        }
+      }
     }
 
     return { user: localUser, error: null };

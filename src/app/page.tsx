@@ -242,6 +242,12 @@ export default function Home() {
       });
       
       if (!authRes.ok) {
+        try {
+          const errData = await authRes.json();
+          console.error("[Auth Sync Failure] Server returned non-OK status:", authRes.status, errData);
+        } catch {
+          console.error("[Auth Sync Failure] Server returned non-OK status:", authRes.status);
+        }
         await supabase.auth.signOut();
         setUser(null);
         setIsAdmin(false);
@@ -635,7 +641,7 @@ export default function Home() {
                         <div className="flex flex-col items-center gap-2 flex-1">
                           <div className="w-14 h-14 rounded-lg bg-[#0a1a0f] border border-[#1a3d24] flex items-center justify-center p-1.5 overflow-hidden">
                             {match.homeTeamCrest ? (
-                              <img src={match.homeTeamCrest} alt={match.homeTeamName} className="object-contain max-h-full max-w-full" />
+                              <img src={match.homeTeamCrest} alt={match.homeTeamName} className="w-full h-full object-contain" />
                             ) : (
                               <User className="w-6 h-6 text-[#6b7280]" />
                             )}
@@ -650,11 +656,12 @@ export default function Home() {
                         <div className="flex flex-col items-center gap-2 flex-1">
                           <div className="w-14 h-14 rounded-lg bg-[#0a1a0f] border border-[#1a3d24] flex items-center justify-center p-1.5 overflow-hidden">
                             {match.awayTeamCrest ? (
-                              <img src={match.awayTeamCrest} alt={match.awayTeamName} className="object-contain max-h-full max-w-full" />
+                              <img src={match.awayTeamCrest} alt={match.awayTeamName} className="w-full h-full object-contain" />
                             ) : (
                               <User className="w-6 h-6 text-[#6b7280]" />
                             )}
                           </div>
+                          <span className="text-sm font-bold text-[#e8e8e8] text-center leading-tight">{match.awayTeamName}</span>
                         </div>
                       </div>
 
@@ -794,7 +801,7 @@ export default function Home() {
                       <div className="flex flex-col items-center gap-2 flex-1">
                         <div className="w-14 h-14 rounded-lg bg-[#0a1a0f] border border-[#1a3d24] flex items-center justify-center p-1.5 overflow-hidden">
                           {match.homeTeamCrest ? (
-                            <img src={match.homeTeamCrest} alt={match.homeTeamName} className="object-contain max-h-full max-w-full" />
+                            <img src={match.homeTeamCrest} alt={match.homeTeamName} className="w-full h-full object-contain" />
                           ) : (
                             <User className="w-6 h-6 text-[#6b7280]" />
                           )}
@@ -819,7 +826,7 @@ export default function Home() {
                       <div className="flex flex-col items-center gap-2 flex-1">
                         <div className="w-14 h-14 rounded-lg bg-[#0a1a0f] border border-[#1a3d24] flex items-center justify-center p-1.5 overflow-hidden">
                           {match.awayTeamCrest ? (
-                            <img src={match.awayTeamCrest} alt={match.awayTeamName} className="object-contain max-h-full max-w-full" />
+                            <img src={match.awayTeamCrest} alt={match.awayTeamName} className="w-full h-full object-contain" />
                           ) : (
                             <User className="w-6 h-6 text-[#6b7280]" />
                           )}
@@ -1042,7 +1049,7 @@ export default function Home() {
                           <span className="text-sm font-bold text-[#e8e8e8] text-right">{match.homeTeamName}</span>
                           <div className="w-10 h-10 rounded-lg bg-[#0a1a0f] border border-[#1a3d24] flex items-center justify-center p-1 overflow-hidden shrink-0">
                             {match.homeTeamCrest ? (
-                              <img src={match.homeTeamCrest} alt={match.homeTeamName} className="object-contain max-h-full max-w-full" />
+                              <img src={match.homeTeamCrest} alt={match.homeTeamName} className="w-full h-full object-contain" />
                             ) : (
                               <User className="w-5 h-5 text-[#6b7280]" />
                             )}
@@ -1074,7 +1081,7 @@ export default function Home() {
                         <div className="flex items-center gap-2.5 flex-1">
                           <div className="w-10 h-10 rounded-lg bg-[#0a1a0f] border border-[#1a3d24] flex items-center justify-center p-1 overflow-hidden shrink-0">
                             {match.awayTeamCrest ? (
-                              <img src={match.awayTeamCrest} alt={match.awayTeamName} className="object-contain max-h-full max-w-full" />
+                              <img src={match.awayTeamCrest} alt={match.awayTeamName} className="w-full h-full object-contain" />
                             ) : (
                               <User className="w-5 h-5 text-[#6b7280]" />
                             )}
@@ -1672,7 +1679,7 @@ export default function Home() {
                               {/* Home Crest */}
                               <div className="w-5 h-5 flex items-center justify-center">
                                 {p.homeTeamCrest ? (
-                                  <img src={p.homeTeamCrest} alt={p.homeTeamName} className="object-contain max-h-full max-w-full" />
+                                  <img src={p.homeTeamCrest} alt={p.homeTeamName} className="w-full h-full object-contain" />
                                 ) : (
                                   <div className="w-1.5 h-1.5 rounded-full bg-[#6b7280]" />
                                 )}
@@ -1683,7 +1690,7 @@ export default function Home() {
                               {/* Away Crest */}
                               <div className="w-5 h-5 flex items-center justify-center">
                                 {p.awayTeamCrest ? (
-                                  <img src={p.awayTeamCrest} alt={p.awayTeamName} className="object-contain max-h-full max-w-full" />
+                                  <img src={p.awayTeamCrest} alt={p.awayTeamName} className="w-full h-full object-contain" />
                                 ) : (
                                   <div className="w-1.5 h-1.5 rounded-full bg-[#6b7280]" />
                                 )}

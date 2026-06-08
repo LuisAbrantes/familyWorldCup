@@ -4,9 +4,11 @@ import { users } from "@/db/schema";
 
 export async function GET() {
   let dbStatus = "NOT TESTED";
+  let sampleMatch = null;
   try {
     const dbUsers = await db.select().from(users).limit(1);
     dbStatus = `SUCCESS: Connected successfully, users found: ${dbUsers.length}`;
+    sampleMatch = await db.query.matches.findFirst();
   } catch (err: any) {
     dbStatus = JSON.stringify({
       name: err?.name || "Unknown",
@@ -26,6 +28,7 @@ export async function GET() {
       : "NOT DEFINED",
     DATABASE_URL_DEFINED: !!process.env.DATABASE_URL,
     DATABASE_CONNECTIVITY: dbStatus,
+    SAMPLE_MATCH: sampleMatch,
     ADMIN_USER_IDS: process.env.ADMIN_USER_IDS || "NOT DEFINED",
     NODE_ENV: process.env.NODE_ENV || "unknown"
   });
