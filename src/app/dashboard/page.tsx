@@ -838,7 +838,7 @@ export default function Home() {
                 MEUS GRUPOS
               </h1>
               <p className="mt-2 text-[#9ca3af] text-sm sm:text-base max-w-xl mx-auto">
-                Crie seu próprio bolão com amigos da firma ou familiares, ou entre em um grupo existente.
+                Crie seu próprio bolão com amigos da firma ou da galera, ou entre em um grupo existente.
               </p>
             </div>
 
@@ -986,7 +986,7 @@ export default function Home() {
                           👑 BOLÃO EXCLUSIVO
                         </span>
                         <p className="text-xs text-[#e8e8e8] leading-relaxed font-semibold">
-                          Monte um bolão particular para a sua firma, amigos ou família com ranking automatizado e palpites em tempo real!
+                          Monte um bolão particular para a sua firma, amigos ou galera com ranking automatizado e palpites em tempo real!
                         </p>
                       </div>
                       <div className="text-xs text-[#9ca3af] leading-relaxed">
@@ -1205,7 +1205,12 @@ export default function Home() {
         {/* ---------------------------------------------- */}
         {activeTab === "jogos" && (
           <div className="flex flex-col gap-5 animate-fadeIn">
-            <h2 className="text-2xl font-black text-[#e8e8e8] uppercase tracking-tight">Todos os Jogos</h2>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <h2 className="text-2xl font-black text-[#e8e8e8] uppercase tracking-tight">Todos os Jogos</h2>
+              <span className="text-[11px] text-[#9ca3af] bg-[#0d2214]/40 border border-[#1a3d24]/60 px-3 py-1 rounded-full w-fit">
+                🔄 Resultados atualizados automaticamente a cada 60 segundos após o término
+              </span>
+            </div>
 
             {/* Filters */}
             <div className="flex flex-col sm:flex-row gap-3 p-4 rounded-2xl bg-[#0d2214]/60 border border-[#1a3d24]">
@@ -1805,7 +1810,7 @@ export default function Home() {
                   Sincronização de Dados
                 </h3>
                 <p className="text-sm text-[#9ca3af] mb-6 leading-relaxed">
-                  Força a sincronização com a API do <strong className="text-[#e8e8e8]">football-data.org</strong>, ignorando o cache de 60s e
+                  Força a atualização dos placares com os resultados oficiais mais recentes, ignorando o cache automático de 60 segundos e
                   recalculando as pontuações.
                 </p>
 

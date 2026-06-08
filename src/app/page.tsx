@@ -22,7 +22,7 @@ export default function LandingPage() {
   const faqs = [
     {
       q: "Como os resultados dos jogos são atualizados?",
-      a: "Tudo é 100% automático! Nossa plataforma acompanha as partidas em tempo real. Assim que o árbitro apita o fim do jogo, os placares são atualizados no painel e os pontos de todos os participantes do seu grupo são recalculados instantaneamente.",
+      a: "Tudo é 100% automático! Nossa plataforma atualiza os placares de forma automática a cada 60 segundos após o apito final de cada jogo. Os pontos de todos os participantes e a tabela de classificação do seu grupo são recalculados na mesma hora.",
     },
     {
       q: "Como funciona a liberação do grupo após a compra?",
@@ -34,7 +34,7 @@ export default function LandingPage() {
     },
     {
       q: "Posso convidar mais de 15 pessoas?",
-      a: "O limite padrão por sala é de 15 participantes para garantir o bom desempenho do servidor. Se você precisar de mais vagas para um grupo da firma ou uma família muito grande, compre a sala normalmente e entre em contato conosco pelo WhatsApp para solicitar um upgrade de vagas por um valor adicional bem acessível.",
+      a: "O limite padrão por sala é de 15 participantes para garantir o bom desempenho do servidor. Se você precisar de mais vagas para um grupo da firma ou uma galera muito grande, compre a sala normalmente e entre em contato conosco pelo WhatsApp para solicitar um upgrade de vagas por um valor adicional bem acessível.",
     },
     {
       q: "Consigo participar de mais de um grupo com a mesma conta?",
@@ -263,7 +263,7 @@ export default function LandingPage() {
             </div>
             
             <h3 className="text-2xl font-extrabold text-[#e8e8e8]">Grupo de Amigos</h3>
-            <p className="text-xs text-[#9ca3af] mt-2">Ideal para grupos familiares, de trabalho ou amigos próximos.</p>
+            <p className="text-xs text-[#9ca3af] mt-2">Ideal para turmas de amigos, colegas de trabalho ou grupos fechados.</p>
 
             <div className="my-8 flex items-baseline gap-1.5 justify-center sm:justify-start">
               <span className="text-5xl font-black text-[#e8e8e8]">R$ 15</span>
