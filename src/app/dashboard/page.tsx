@@ -27,6 +27,7 @@ import {
   BarChart3,
   Eye,
   EyeOff,
+  HelpCircle,
 } from "lucide-react";
 
 interface Match {
@@ -161,6 +162,40 @@ export default function Home() {
   const [creatingRoom, setCreatingRoom] = useState(false);
   const [joiningRoom, setJoiningRoom] = useState(false);
   const [roomActionFeedback, setRoomActionFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Tutorial states
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState(0);
+
+  // Tutorial steps definition
+  const tutorialSteps = [
+    {
+      title: "Bem-vindo ao Bolão!",
+      description: "Ficamos muito felizes em ter você aqui! Preparamos este rápido tutorial para te ajudar a entender como funciona o nosso bolão de forma simples e divertida.",
+      icon: <Trophy className="w-12 h-12 text-[#d4a017] animate-bounce" />,
+    },
+    {
+      title: "Navegação Rápida",
+      description: "Use as abas no topo para navegar pelas seções:\n• Início: Visão geral e partidas do dia;\n• Grupos: Crie novos grupos ou entre com código de convite;\n• Jogos: Veja a lista completa de confrontos;\n• Ranking: Acompanhe a tabela de pontos do seu grupo;\n• Palpites: Gerencie e salve os seus placares prediletos.",
+      icon: <Calendar className="w-12 h-12 text-[#d4a017]" />,
+    },
+    {
+      title: "Crie ou Entre em Grupos",
+      description: "Na aba 'Grupos', você pode criar um grupo exclusivo para a sua galera, amigos ou colegas de trabalho, ou entrar em um grupo existente usando o código de convite gerado. Cada grupo tem seu próprio ranking e histórico de palpites!",
+      icon: <Users className="w-12 h-12 text-[#d4a017]" />,
+    },
+    {
+      title: "Regra Anti-Spoiler 🔒",
+      description: "Para ver o palpite dos outros participantes em um jogo antes dele começar, você precisa primeiro registrar o seu próprio palpite! Isso garante que o jogo seja justo e que ninguém mude o palpite copiando o seu placar no último minuto.",
+      icon: <Lock className="w-12 h-12 text-[#d4a017]" />,
+    },
+    {
+      title: "Tudo Pronto!",
+      description: "Agora você já sabe como jogar! Lembre-se de sempre salvar seus palpites na aba 'Palpites' antes do início das partidas. Se precisar rever estas instruções, basta clicar em 'Como Usar' no menu superior. Boa sorte!",
+      icon: <CheckCircle className="w-12 h-12 text-[#d4a017] animate-pulse" />,
+    },
+  ];
+
 
   // Super Admin creator email states
   const [newAuthEmail, setNewAuthEmail] = useState("");
@@ -462,6 +497,11 @@ export default function Home() {
         setLeaderboard([]);
         setSocialPredictions({});
         setActiveTab("rooms");
+      }
+
+      const tutorialDone = localStorage.getItem("hasCompletedTutorial");
+      if (tutorialDone !== "true") {
+        setShowTutorial(true);
       }
     } catch (error: any) {
       console.error("Erro no carregamento de dados:", error);
@@ -781,6 +821,14 @@ export default function Home() {
                   <span className="hidden sm:block text-sm font-semibold text-[#e8e8e8]">
                     {user.displayName}
                   </span>
+                  <button
+                    onClick={() => { setTutorialStep(0); setShowTutorial(true); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#d4a017] hover:bg-[#d4a017]/10 hover:text-[#e8e8e8] transition-all border border-[#d4a017]/20 cursor-pointer"
+                    title="Ver Tutorial"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Como Usar</span>
+                  </button>
                   <button
                     onClick={handleLogout}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-red-400 hover:bg-red-900/10 hover:text-red-300 transition-all border border-red-900/20 cursor-pointer"
@@ -2347,8 +2395,98 @@ export default function Home() {
       <footer className="py-6 px-4 border-t border-[#1a3d24] text-center text-xs text-[#6b7280] font-semibold mt-auto">
         Desenvolvido com carinho para o Bolão da Copa 2026.
       </footer>
+
+      {/* ─── TUTORIAL WALKTHROUGH MODAL ─── */}
+      {showTutorial && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className="card-glass border border-[#d4a017]/30 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col bg-[#0d2214]/95">
+            {/* Header / Progress bar */}
+            <div className="w-full bg-[#1a3d24]/30 h-1">
+              <div 
+                className="bg-[#d4a017] h-full transition-all duration-300"
+                style={{ width: `${((tutorialStep + 1) / tutorialSteps.length) * 100}%` }}
+              />
+            </div>
+            
+            {/* Content */}
+            <div className="p-6 sm:p-8 flex flex-col items-center text-center gap-5">
+              <div className="p-4 bg-[#d4a017]/10 rounded-full border border-[#d4a017]/25 text-[#d4a017] mb-2">
+                {tutorialSteps[tutorialStep].icon}
+              </div>
+              
+              <h3 className="text-xl font-extrabold text-[#d4a017] tracking-tight uppercase">
+                {tutorialSteps[tutorialStep].title}
+              </h3>
+              
+              <p className="text-sm text-[#9ca3af] leading-relaxed whitespace-pre-line min-h-[100px] flex items-center justify-center">
+                {tutorialSteps[tutorialStep].description}
+              </p>
+              
+              {/* Dots */}
+              <div className="flex gap-1.5 mt-2">
+                {tutorialSteps.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setTutorialStep(idx)}
+                    className={`w-2.5 h-2.5 rounded-full transition-all duration-200 cursor-pointer ${
+                      idx === tutorialStep 
+                        ? "bg-[#d4a017] w-5" 
+                        : "bg-[#1a3d24] hover:bg-[#d4a017]/40"
+                    }`}
+                    aria-label={`Ir para o passo ${idx + 1}`}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Actions Footer */}
+            <div className="p-4 bg-[#0a1a0f]/80 border-t border-[#1a3d24]/50 flex items-center justify-between">
+              <button
+                onClick={() => {
+                  localStorage.setItem("hasCompletedTutorial", "true");
+                  setShowTutorial(false);
+                }}
+                className="text-xs font-semibold text-[#9ca3af] hover:text-[#d4a017] transition-all px-3 py-2 rounded-lg cursor-pointer"
+              >
+                Pular
+              </button>
+
+              <div className="flex gap-2">
+                {tutorialStep > 0 && (
+                  <button
+                    onClick={() => setTutorialStep(prev => prev - 1)}
+                    className="px-4 py-2 rounded-lg bg-[#0a1a0f] border border-[#1a3d24] text-xs font-bold text-[#e8e8e8] hover:bg-[#1a3d24] transition-all cursor-pointer"
+                  >
+                    Voltar
+                  </button>
+                )}
+                
+                {tutorialStep < tutorialSteps.length - 1 ? (
+                  <button
+                    onClick={() => setTutorialStep(prev => prev + 1)}
+                    className="px-4 py-2 rounded-lg bg-[#d4a017] hover:bg-[#b8860b] text-[#0a1a0f] text-xs font-bold transition-all cursor-pointer shadow-md shadow-[#d4a017]/10"
+                  >
+                    Avançar
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      localStorage.setItem("hasCompletedTutorial", "true");
+                      setShowTutorial(false);
+                    }}
+                    className="px-4 py-2 rounded-lg bg-[#d4a017] hover:bg-[#b8860b] text-[#0a1a0f] text-xs font-bold transition-all cursor-pointer shadow-md shadow-[#d4a017]/10"
+                  >
+                    Começar
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+
 }
 
 function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
