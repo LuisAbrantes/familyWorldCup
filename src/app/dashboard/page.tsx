@@ -2642,161 +2642,14 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
 
   return (
     <div className="flex min-h-screen w-full bg-[#0a1a0f] text-[#e8e8e8]">
-      {/* Left Column: Login Form */}
-      <div className="w-full lg:w-[45%] flex flex-col justify-center px-4 sm:px-6 lg:px-12 py-12 relative z-20">
-        <div className="w-full max-w-md mx-auto bg-[#0d2214]/65 card-glass border border-[#1a3d24]/60 rounded-2xl p-6 sm:p-8 shadow-2xl animate-fadeIn">
-          <div className="flex flex-col items-center gap-3 mb-6">
-            <div className="p-3 bg-[#d4a017]/10 rounded-full border border-[#d4a017]/25 text-[#d4a017]">
-              <Trophy className="w-8 h-8 animate-pulse" />
-            </div>
-            <h1 className="text-2xl font-extrabold text-[#d4a017] tracking-tight text-center">
-              {isForgotPassword 
-                ? "RECUPERAR SENHA" 
-                : "BOLÃO DA COPA 2026"}
-            </h1>
-            <p className="text-sm text-[#9ca3af] text-center">
-              {isForgotPassword
-                ? "Digite seu e-mail para receber um link de redefinição de senha"
-                : isLogin
-                ? "Entre para salvar seus palpites e ver a classificação"
-                : "Crie sua conta para participar do bolão"}
-            </p>
-          </div>
-
-          {message && (
-            <div
-              className={`p-3 rounded-lg border text-sm mb-4 flex items-center gap-2 ${
-                message.type === "success"
-                  ? "bg-[#1a3d24]/20 border-[#1a3d24] text-green-400"
-                  : "bg-red-950/20 border-red-900/40 text-red-400"
-              }`}
-            >
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{message.text}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {!isForgotPassword && !isLogin && (
-              <div>
-                <label className="block text-xs font-semibold text-[#9ca3af] mb-1.5 uppercase tracking-wider">
-                  Seu Nome (como aparecerá no ranking)
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Ex: Tio João, Luisa, Marcelo..."
-                  required
-                  className="w-full bg-[#08150c] border border-[#1a3d24] focus:border-[#d4a017] focus:ring-1 focus:ring-[#d4a017] rounded-lg px-4 py-2.5 text-sm outline-none text-[#e8e8e8] placeholder-[#4b5563] transition-all"
-                />
-              </div>
-            )}
-
-            <div>
-              <label className="block text-xs font-semibold text-[#9ca3af] mb-1.5 uppercase tracking-wider">
-                E-mail
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="seuemail@exemplo.com"
-                required
-                className="w-full bg-[#08150c] border border-[#1a3d24] focus:border-[#d4a017] focus:ring-1 focus:ring-[#d4a017] rounded-lg px-4 py-2.5 text-sm outline-none text-[#e8e8e8] placeholder-[#4b5563] transition-all"
-              />
-            </div>
-
-            {!isForgotPassword && (
-              <div>
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className="block text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">
-                    Senha
-                  </label>
-                  {isLogin && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsForgotPassword(true);
-                        setMessage(null);
-                      }}
-                      className="text-xs text-[#d4a017] hover:underline cursor-pointer"
-                    >
-                      Esqueceu sua senha?
-                    </button>
-                  )}
-                </div>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                    className="w-full bg-[#08150c] border border-[#1a3d24] focus:border-[#d4a017] focus:ring-1 focus:ring-[#d4a017] rounded-lg pl-4 pr-10 py-2.5 text-sm outline-none text-[#e8e8e8] placeholder-[#4b5563] transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[#d4a017] transition-all cursor-pointer"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-[#d4a017] hover:bg-[#b8860b] text-[#0a1a0f] disabled:bg-gray-600 disabled:text-gray-300 font-bold py-3 px-4 rounded-lg text-sm transition-all duration-200 cursor-pointer shadow-lg shadow-[#d4a017]/10"
-            >
-              {loading 
-                ? "Processando..." 
-                : isForgotPassword 
-                ? "Enviar E-mail de Recuperação" 
-                : isLogin 
-                ? "Entrar" 
-                : "Criar Conta"}
-            </button>
-          </form>
-
-          <div className="mt-6 pt-6 border-t border-[#1a3d24] text-center">
-            {isForgotPassword ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsForgotPassword(false);
-                  setMessage(null);
-                }}
-                className="text-sm text-[#9ca3af] hover:text-[#d4a017] transition-all cursor-pointer font-medium"
-              >
-                Voltar para o login
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsLogin(!isLogin);
-                  setMessage(null);
-                }}
-                className="text-sm text-[#9ca3af] hover:text-[#d4a017] transition-all cursor-pointer font-medium"
-              >
-                {isLogin ? "Não tem conta? Crie uma aqui" : "Já tem conta? Faça login"}
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Right Column: Hero Visual Graphic Banner */}
-      <div className="hidden lg:flex w-[55%] relative overflow-hidden bg-[#0d2214] border-l border-[#1a3d24]/60">
+      {/* Left Column: Hero Visual Graphic Banner */}
+      <div className="hidden lg:flex w-[55%] relative overflow-hidden bg-[#0d2214] border-r border-[#1a3d24]/60">
         <img 
-          src="/world_cup_banner.png" 
-          alt="World Cup Golden Trophy Banner" 
-          className="absolute inset-0 w-full h-full object-cover opacity-60"
+          src="/selecao_brasileira.webp" 
+          alt="Seleção Brasileira na Copa do Mundo" 
+          className="absolute inset-0 w-full h-full object-cover opacity-75 scale-105 hover:scale-100 transition-all duration-[12s] ease-out"
         />
-        <div className="absolute inset-0 bg-gradient-to-tr from-[#0a1a0f] via-[#0a1a0f]/40 to-transparent z-10" />
+        <div className="absolute inset-0 bg-gradient-to-tr from-[#0a1a0f] via-[#0a1a0f]/30 to-transparent z-10" />
         
         {/* Content overlay */}
         <div className="relative z-20 flex flex-col justify-between h-full w-full p-12">
@@ -2823,6 +2676,159 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
             <p className="text-sm text-[#9ca3af] leading-relaxed">
               Dispute pontos baseados em placares reais, crie grupos particulares com rankings dinâmicos e confira os palpites em tempo real após o pontapé inicial. A melhor plataforma de bolão para a Copa 2026.
             </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Column: Login Form */}
+      <div className="w-full lg:w-[45%] flex flex-col justify-center px-4 sm:px-8 lg:px-16 py-12 relative z-20">
+        <div className="w-full max-w-lg mx-auto bg-[#0d2214]/65 card-glass border border-[#1a3d24]/60 rounded-3xl p-8 sm:p-10 shadow-2xl relative overflow-hidden animate-fadeIn">
+          {/* Themed Top Bar */}
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-[#d4a017] to-emerald-500" />
+          
+          <div className="flex flex-col items-center gap-3.5 mb-8">
+            {/* Themed Badge */}
+            <div className="bg-emerald-950/40 border border-emerald-900/60 rounded-full px-3.5 py-1 flex items-center gap-1.5 mb-1">
+              <span className="w-2 h-2 rounded-full bg-[#d4a017] animate-pulse" />
+              <span className="text-[10px] font-extrabold tracking-widest text-[#d4a017] uppercase">⚽ COPA 2026 • RUMO AO HEXA</span>
+            </div>
+            
+            <h1 className="text-3xl font-black text-[#d4a017] tracking-tight text-center uppercase leading-none">
+              {isForgotPassword 
+                ? "RECUPERAR SENHA" 
+                : "BOLÃO DA COPA 2026"}
+            </h1>
+            <p className="text-sm text-[#9ca3af] text-center max-w-sm">
+              {isForgotPassword
+                ? "Digite seu e-mail para receber um link de redefinição de senha"
+                : isLogin
+                ? "Entre para salvar seus palpites e ver a classificação do seu grupo"
+                : "Crie sua conta e comece a palpitar agora mesmo!"}
+            </p>
+          </div>
+
+          {message && (
+            <div
+              className={`p-4 rounded-xl border text-sm mb-6 flex items-center gap-2.5 ${
+                message.type === "success"
+                  ? "bg-[#1a3d24]/20 border-[#1a3d24] text-green-400"
+                  : "bg-red-950/20 border-red-900/40 text-red-400"
+              }`}
+            >
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{message.text}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {!isForgotPassword && !isLogin && (
+              <div>
+                <label className="block text-xs font-bold text-[#9ca3af] mb-2 uppercase tracking-wider">
+                  Seu Nome (como aparecerá no ranking)
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ex: Tio João, Luisa, Marcelo..."
+                  required
+                  className="w-full bg-[#08150c] border border-[#1a3d24] focus:border-[#d4a017] focus:ring-2 focus:ring-[#d4a017]/10 rounded-xl px-4 py-3.5 text-sm outline-none text-[#e8e8e8] placeholder-[#4b5563] transition-all"
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-bold text-[#9ca3af] mb-2 uppercase tracking-wider">
+                E-mail
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="seuemail@exemplo.com"
+                required
+                className="w-full bg-[#08150c] border border-[#1a3d24] focus:border-[#d4a017] focus:ring-2 focus:ring-[#d4a017]/10 rounded-xl px-4 py-3.5 text-sm outline-none text-[#e8e8e8] placeholder-[#4b5563] transition-all"
+              />
+            </div>
+
+            {!isForgotPassword && (
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-xs font-bold text-[#9ca3af] uppercase tracking-wider">
+                    Senha
+                  </label>
+                  {isLogin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsForgotPassword(true);
+                        setMessage(null);
+                      }}
+                      className="text-xs text-[#d4a017] hover:underline cursor-pointer"
+                    >
+                      Esqueceu sua senha?
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    className="w-full bg-[#08150c] border border-[#1a3d24] focus:border-[#d4a017] focus:ring-2 focus:ring-[#d4a017]/10 rounded-xl pl-4 pr-11 py-3.5 text-sm outline-none text-[#e8e8e8] placeholder-[#4b5563] transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[#d4a017] transition-all cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-[#d4a017] to-[#e6b422] hover:from-[#b8860b] hover:to-[#d4a017] text-[#0a1a0f] disabled:bg-gray-600 disabled:text-gray-300 font-extrabold py-3.5 px-4 rounded-xl text-sm transition-all duration-300 cursor-pointer shadow-lg shadow-[#d4a017]/10 uppercase tracking-widest flex items-center justify-center gap-2 mt-2"
+            >
+              {loading 
+                ? "Processando..." 
+                : isForgotPassword 
+                ? "Enviar E-mail de Recuperação" 
+                : isLogin 
+                ? "Entrar no Bolão" 
+                : "Criar Minha Conta"}
+            </button>
+          </form>
+
+          <div className="mt-8 pt-6 border-t border-[#1a3d24]/65 text-center">
+            {isForgotPassword ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsForgotPassword(false);
+                  setMessage(null);
+                }}
+                className="text-sm text-[#9ca3af] hover:text-[#d4a017] transition-all cursor-pointer font-semibold"
+              >
+                Voltar para o login
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsLogin(!isLogin);
+                  setMessage(null);
+                }}
+                className="text-sm text-[#9ca3af] hover:text-[#d4a017] transition-all cursor-pointer font-semibold"
+              >
+                {isLogin ? "Ainda não tem conta? Crie uma aqui" : "Já possui conta? Faça login"}
+              </button>
+            )}
           </div>
         </div>
       </div>
