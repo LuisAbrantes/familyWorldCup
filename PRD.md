@@ -1,6 +1,6 @@
 # PRD: Bolão da Copa do Mundo 2026 (família)
 
-## 1. Resumo
+## 1. Resumo.
 
 A web app onde membros de uma família entram com login, registram palpites de placar para cada jogo da Copa do Mundo de 2026, e competem num ranking. Jogos e resultados são puxados automaticamente da API gratuita da football-data.org, sem atualização manual. A pontuação de cada palpite é calculada automaticamente quando o jogo termina.
 
