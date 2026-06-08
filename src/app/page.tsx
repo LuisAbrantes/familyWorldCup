@@ -897,7 +897,7 @@ export default function Home() {
                             <div className="text-xs text-[#9ca3af]">
                               Participantes:{" "}
                               <span className="font-bold text-[#e8e8e8]">
-                                {room.memberCount ?? 1} / {room.maxMembers ?? 10}
+                                {room.memberCount ?? 1} / {room.maxMembers ?? 15}
                               </span>
                             </div>
                           </div>
@@ -990,8 +990,8 @@ export default function Home() {
                         </p>
                       </div>
                       <div className="text-xs text-[#9ca3af] leading-relaxed">
-                        <span className="text-[#e8e8e8] font-bold block mb-1">Preço Sugerido:</span>
-                        R$ 2 por participante ou R$ 15 fixo por grupo (totalmente negociável direto com o administrador).
+                        <span className="text-[#e8e8e8] font-bold block mb-1">Preço:</span>
+                        R$ 15 por grupo (com limite de até 15 participantes - negociável direto com o administrador).
                       </div>
                       <div className="text-[11px] text-[#9ca3af] italic leading-normal">
                         Fale comigo no WhatsApp para acertar o PIX e liberar a criação da sua sala agora mesmo!
