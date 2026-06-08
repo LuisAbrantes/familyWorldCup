@@ -25,6 +25,8 @@ import {
   LogOut,
   Users,
   BarChart3,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 interface Match {
@@ -147,6 +149,7 @@ export default function Home() {
   const [socialPredictions, setSocialPredictions] = useState<any>({});
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   // Action states
   const [syncing, setSyncing] = useState(false);
@@ -363,9 +366,20 @@ export default function Home() {
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setIsResettingPassword(true);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
   const handleSavePrediction = async (matchId: number) => {
-    const scores = predictedScores[matchId];
-    if (!scores) return;
+    const scores = predictedScores[matchId] || { home: 0, away: 0 };
 
     setSavingPrediction((prev) => ({ ...prev, [matchId]: true }));
     setPredictionFeedback((prev) => ({ ...prev, [matchId]: null as any }));
@@ -498,6 +512,17 @@ export default function Home() {
           <p className="text-[#9ca3af] font-medium animate-pulse">Carregando dados da Copa do Mundo...</p>
         </div>
       </div>
+    );
+  }
+
+  if (isResettingPassword) {
+    return (
+      <ResetPasswordForm
+        onResetSuccess={async () => {
+          setIsResettingPassword(false);
+          await loadData();
+        }}
+      />
     );
   }
 
@@ -1829,10 +1854,12 @@ export default function Home() {
 
 function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
   const [isLogin, setIsLogin] = useState(true);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1841,7 +1868,16 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
     setMessage(null);
 
     try {
-      if (isLogin) {
+      if (isForgotPassword) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+          redirectTo: `${window.location.origin}/`,
+        });
+        if (error) throw error;
+        setMessage({
+          type: "success",
+          text: "E-mail de recuperação enviado! Verifique sua caixa de entrada.",
+        });
+      } else if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -1881,10 +1917,14 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
             <Trophy className="w-8 h-8" />
           </div>
           <h1 className="text-2xl font-extrabold text-[#d4a017] tracking-tight text-center">
-            BOLÃO DA FAMÍLIA COPA 2026
+            {isForgotPassword 
+              ? "RECUPERAR SENHA" 
+              : "BOLÃO DA FAMÍLIA COPA 2026"}
           </h1>
           <p className="text-sm text-[#9ca3af] text-center">
-            {isLogin
+            {isForgotPassword
+              ? "Digite seu e-mail para receber um link de redefinição de senha"
+              : isLogin
               ? "Entre para salvar seus palpites e ver a classificação"
               : "Crie sua conta para participar do bolão"}
           </p>
@@ -1904,7 +1944,7 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {!isLogin && (
+          {!isForgotPassword && !isLogin && (
             <div>
               <label className="block text-xs font-semibold text-[#9ca3af] mb-1.5 uppercase tracking-wider">
                 Seu Nome (como aparecerá no ranking)
@@ -1934,18 +1974,200 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
             />
           </div>
 
+          {!isForgotPassword && (
+            <div>
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="block text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">
+                  Senha
+                </label>
+                {isLogin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsForgotPassword(true);
+                      setMessage(null);
+                    }}
+                    className="text-xs text-[#d4a017] hover:underline cursor-pointer"
+                  >
+                    Esqueceu sua senha?
+                  </button>
+                )}
+              </div>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className="w-full bg-[#08150c] border border-[#1a3d24] focus:border-[#d4a017] focus:ring-1 focus:ring-[#d4a017] rounded-lg pl-4 pr-10 py-2.5 text-sm outline-none text-[#e8e8e8] placeholder-[#4b5563] transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[#d4a017] transition-all cursor-pointer"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-[#d4a017] hover:bg-[#b8860b] text-[#0a1a0f] disabled:bg-gray-600 disabled:text-gray-300 font-bold py-3 px-4 rounded-lg text-sm transition-all duration-200 cursor-pointer shadow-lg shadow-[#d4a017]/10"
+          >
+            {loading 
+              ? "Processando..." 
+              : isForgotPassword 
+              ? "Enviar E-mail de Recuperação" 
+              : isLogin 
+              ? "Entrar" 
+              : "Criar Conta"}
+          </button>
+        </form>
+
+        <div className="mt-6 pt-6 border-t border-[#1a3d24] text-center">
+          {isForgotPassword ? (
+            <button
+              type="button"
+              onClick={() => {
+                setIsForgotPassword(false);
+                setMessage(null);
+              }}
+              className="text-sm text-[#9ca3af] hover:text-[#d4a017] transition-all cursor-pointer font-medium"
+            >
+              Voltar para o login
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setIsLogin(!isLogin);
+                setMessage(null);
+              }}
+              className="text-sm text-[#9ca3af] hover:text-[#d4a017] transition-all cursor-pointer font-medium"
+            >
+              {isLogin ? "Não tem conta? Crie uma aqui" : "Já tem conta? Faça login"}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ResetPasswordForm({ onResetSuccess }: { onResetSuccess: () => void }) {
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 6) {
+      setMessage({ type: "error", text: "A senha deve ter pelo menos 6 caracteres." });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setMessage({ type: "error", text: "As senhas não coincidem." });
+      return;
+    }
+
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+
+      setMessage({ type: "success", text: "Senha atualizada com sucesso!" });
+      setTimeout(() => {
+        onResetSuccess();
+      }, 2000);
+    } catch (error: any) {
+      setMessage({ type: "error", text: error.message || "Erro ao atualizar a senha." });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-[#0a1a0f] text-[#e8e8e8] px-4">
+      <div className="w-full max-w-md bg-[#0d2214] border border-[#1a3d24] rounded-2xl p-6 sm:p-8 shadow-2xl">
+        <div className="flex flex-col items-center gap-3 mb-6">
+          <div className="p-3 bg-[#d4a017]/10 rounded-full border border-[#d4a017]/25 text-[#d4a017]">
+            <Trophy className="w-8 h-8" />
+          </div>
+          <h1 className="text-2xl font-extrabold text-[#d4a017] tracking-tight text-center">
+            REDEFINIR SENHA
+          </h1>
+          <p className="text-sm text-[#9ca3af] text-center">
+            Digite sua nova senha para acessar o bolão
+          </p>
+        </div>
+
+        {message && (
+          <div
+            className={`p-3 rounded-lg border text-sm mb-4 flex items-center gap-2 ${
+              message.type === "success"
+                ? "bg-[#1a3d24]/20 border-[#1a3d24] text-green-400"
+                : "bg-red-950/20 border-red-900/40 text-red-400"
+            }`}
+          >
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{message.text}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-[#9ca3af] mb-1.5 uppercase tracking-wider">
-              Senha
+              Nova Senha
             </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              className="w-full bg-[#08150c] border border-[#1a3d24] focus:border-[#d4a017] focus:ring-1 focus:ring-[#d4a017] rounded-lg px-4 py-2.5 text-sm outline-none text-[#e8e8e8] placeholder-[#4b5563] transition-all"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+                required
+                className="w-full bg-[#08150c] border border-[#1a3d24] focus:border-[#d4a017] focus:ring-1 focus:ring-[#d4a017] rounded-lg pl-4 pr-10 py-2.5 text-sm outline-none text-[#e8e8e8] placeholder-[#4b5563] transition-all"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[#d4a017] transition-all cursor-pointer"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-[#9ca3af] mb-1.5 uppercase tracking-wider">
+              Confirmar Nova Senha
+            </label>
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirme a senha"
+                required
+                className="w-full bg-[#08150c] border border-[#1a3d24] focus:border-[#d4a017] focus:ring-1 focus:ring-[#d4a017] rounded-lg pl-4 pr-10 py-2.5 text-sm outline-none text-[#e8e8e8] placeholder-[#4b5563] transition-all"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[#d4a017] transition-all cursor-pointer"
+              >
+                {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
 
           <button
@@ -1953,22 +2175,9 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
             disabled={loading}
             className="w-full bg-[#d4a017] hover:bg-[#b8860b] text-[#0a1a0f] disabled:bg-gray-600 disabled:text-gray-300 font-bold py-3 px-4 rounded-lg text-sm transition-all duration-200 cursor-pointer shadow-lg shadow-[#d4a017]/10"
           >
-            {loading ? "Processando..." : isLogin ? "Entrar" : "Criar Conta"}
+            {loading ? "Salvando..." : "Salvar Nova Senha"}
           </button>
         </form>
-
-        <div className="mt-6 pt-6 border-t border-[#1a3d24] text-center">
-          <button
-            type="button"
-            onClick={() => {
-              setIsLogin(!isLogin);
-              setMessage(null);
-            }}
-            className="text-sm text-[#9ca3af] hover:text-[#d4a017] transition-all cursor-pointer font-medium"
-          >
-            {isLogin ? "Não tem conta? Crie uma aqui" : "Já tem conta? Faça login"}
-          </button>
-        </div>
       </div>
     </div>
   );
