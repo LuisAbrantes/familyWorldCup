@@ -2580,7 +2580,6 @@ export default function Home() {
       )}
     </div>
   );
-
 }
 
 function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
@@ -2610,7 +2609,7 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
         });
       } else if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({
-          email,
+          email: email.trim(),
           password,
         });
         if (error) throw error;
@@ -2618,7 +2617,7 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
       } else {
         if (!name.trim()) throw new Error("Por favor, preencha o seu nome.");
         const { error } = await supabase.auth.signUp({
-          email,
+          email: email.trim(),
           password,
           options: {
             data: {
@@ -2629,9 +2628,8 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
         if (error) throw error;
         setMessage({
           type: "success",
-          text: "Conta criada com sucesso! Você já pode fazer login ou confirmar o e-mail.",
+          text: "Conta criada com sucesso! Verifique seu e-mail para confirmação.",
         });
-        setIsLogin(true);
       }
     } catch (error: any) {
       setMessage({ type: "error", text: error.message || "Ocorreu um erro." });
@@ -2641,69 +2639,121 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
   };
 
   return (
-    <div className="flex min-h-screen w-full bg-[#0a1a0f] text-[#e8e8e8]">
-      {/* Left Column: Hero Visual Graphic Banner */}
-      <div className="hidden lg:flex w-[55%] relative overflow-hidden bg-[#0d2214] border-r border-[#1a3d24]/60">
+    <div className="flex min-h-screen w-full bg-[#051109] text-[#e8e8e8]">
+      {/* Left Column: Premium visual column dedicated to Seleção Brasileira and World Cup history */}
+      <div className="hidden lg:flex w-1/2 relative flex-col justify-between p-12 overflow-hidden bg-[#040e07] border-r border-[#13311a]">
+        {/* Background Image: Uniform/travel suit of Brazilian squad with high contrast */}
         <img 
           src="/selecao_brasileira.webp" 
-          alt="Seleção Brasileira na Copa do Mundo" 
-          className="absolute inset-0 w-full h-full object-cover opacity-75 scale-105 hover:scale-100 transition-all duration-[12s] ease-out"
+          alt="Seleção Brasileira Copa do Mundo" 
+          className="absolute inset-0 w-full h-full object-cover opacity-35 scale-100 hover:scale-105 transition-all duration-[12s] ease-out brightness-75 saturate-[0.85]"
         />
-        <div className="absolute inset-0 bg-gradient-to-tr from-[#0a1a0f] via-[#0a1a0f]/30 to-transparent z-10" />
         
-        {/* Content overlay */}
-        <div className="relative z-20 flex flex-col justify-between h-full w-full p-12">
-          {/* Top Branding */}
-          <div className="flex items-center gap-2.5 text-[#e8e8e8]">
-            <Trophy className="w-8 h-8 text-[#d4a017]" />
-            <span className="text-xl font-extrabold tracking-tight">
-              BOLÃO <span className="text-[#d4a017]">2026</span>
-            </span>
-          </div>
-
-          {/* Bottom Card Promo */}
-          <div className="max-w-lg bg-[#0a1a0f]/85 backdrop-blur-md border border-[#1a3d24]/60 p-8 rounded-2xl shadow-2xl">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="flex h-2.5 w-2.5 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-              </span>
-              <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Tempo Real</span>
+        {/* Sleek green gradients blending with gold glow */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#040e07] via-[#040e07]/45 to-transparent z-10" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#040e07]/80 via-transparent to-transparent z-10" />
+        
+        {/* Top bar with trophy logo, 5 stars and country badge */}
+        <div className="relative z-20 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-[#d4a017]/15 rounded-xl border border-[#d4a017]/30 text-[#d4a017]">
+              <Trophy className="w-6 h-6 animate-pulse" />
             </div>
-            <h2 className="text-2xl font-black text-[#e8e8e8] mb-3 tracking-tight leading-snug">
-              DE OUTRO MUNDO. CRIE GRUPOS DE PALPITES COM A SUA GALERA E COMPITA.
-            </h2>
-            <p className="text-sm text-[#9ca3af] leading-relaxed">
-              Dispute pontos baseados em placares reais, crie grupos particulares com rankings dinâmicos e confira os palpites em tempo real após o pontapé inicial. A melhor plataforma de bolão para a Copa 2026.
-            </p>
+            <div className="flex flex-col">
+              <span className="text-sm font-black tracking-widest text-[#d4a017]">BRASIL</span>
+              <span className="text-[10px] font-bold text-emerald-400 tracking-wider">RUMO AO HEXA</span>
+            </div>
+          </div>
+          
+          <div className="flex flex-col items-end">
+            <span className="text-lg tracking-widest text-[#d4a017] drop-shadow-[0_0_10px_rgba(212,160,23,0.3)] font-bold">⭐⭐⭐⭐⭐</span>
+            <span className="text-[9px] font-black text-[#9ca3af] tracking-widest">PENTACAMPEÃO</span>
+          </div>
+        </div>
+
+        {/* Center: Inspirational / Marketing copy */}
+        <div className="relative z-20 max-w-md my-auto py-10">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-950/45 border border-emerald-500/35 rounded-full text-xs font-bold text-emerald-400 mb-4 uppercase tracking-widest">
+            🇧🇷 Bolão Oficial da Família & Amigos
+          </span>
+          <h2 className="text-4xl font-black text-[#e8e8e8] mb-4 tracking-tight leading-tight uppercase">
+            A paixão pela <span className="text-[#d4a017]">Seleção</span> no seu celular.
+          </h2>
+          <p className="text-sm text-[#9ca3af] leading-relaxed mb-6">
+            Palpite nos placares reais da Copa do Mundo 2026, dispute posições no ranking exclusivo de cada grupo em tempo real e mostre quem realmente entende de futebol.
+          </p>
+          
+          <div className="h-0.5 w-16 bg-[#d4a017]/40 rounded-full" />
+        </div>
+
+        {/* Bottom: Elegant Timeline of victories */}
+        <div className="relative z-20 border-t border-[#13311a]/70 pt-8">
+          <h3 className="text-xs font-black text-emerald-400 uppercase tracking-widest mb-4">
+            Nossa Trajetória de Títulos Mundiais 🇧🇷
+          </h3>
+          <div className="grid grid-cols-5 gap-3">
+            <div className="bg-[#051109]/90 border border-[#13311a] p-3 rounded-xl hover:border-[#d4a017]/45 transition-all">
+              <div className="text-xs font-black text-[#d4a017]">1958</div>
+              <div className="text-[9px] font-bold text-[#e8e8e8]">Suécia</div>
+              <div className="text-[8px] text-[#6b7280] mt-1 leading-snug">Pelé brilha aos 17 anos.</div>
+            </div>
+            <div className="bg-[#051109]/90 border border-[#13311a] p-3 rounded-xl hover:border-[#d4a017]/45 transition-all">
+              <div className="text-xs font-black text-[#d4a017]">1962</div>
+              <div className="text-[9px] font-bold text-[#e8e8e8]">Chile</div>
+              <div className="text-[8px] text-[#6b7280] mt-1 leading-snug">Garrincha comanda o bi.</div>
+            </div>
+            <div className="bg-[#051109]/90 border border-[#13311a] p-3 rounded-xl hover:border-[#d4a017]/45 transition-all">
+              <div className="text-xs font-black text-[#d4a017]">1970</div>
+              <div className="text-[9px] font-bold text-[#e8e8e8]">México</div>
+              <div className="text-[8px] text-[#6b7280] mt-1 leading-snug">O melhor time da história.</div>
+            </div>
+            <div className="bg-[#051109]/90 border border-[#13311a] p-3 rounded-xl hover:border-[#d4a017]/45 transition-all">
+              <div className="text-xs font-black text-[#d4a017]">1994</div>
+              <div className="text-[9px] font-bold text-[#e8e8e8]">EUA</div>
+              <div className="text-[8px] text-[#6b7280] mt-1 leading-snug">Tetra da raça e Romário.</div>
+            </div>
+            <div className="bg-[#051109]/90 border border-[#13311a] p-3 rounded-xl hover:border-[#d4a017]/45 transition-all">
+              <div className="text-xs font-black text-[#d4a017]">2002</div>
+              <div className="text-[9px] font-bold text-[#e8e8e8]">Japão/Kr</div>
+              <div className="text-[8px] text-[#6b7280] mt-1 leading-snug">Fenômeno traz o penta.</div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Right Column: Login Form */}
-      <div className="w-full lg:w-[45%] flex flex-col justify-center px-4 sm:px-8 lg:px-16 py-12 relative z-20">
-        <div className="w-full max-w-lg mx-auto bg-[#0d2214]/65 card-glass border border-[#1a3d24]/60 rounded-3xl p-8 sm:p-10 shadow-2xl relative overflow-hidden animate-fadeIn">
-          {/* Themed Top Bar */}
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-[#d4a017] to-emerald-500" />
-          
+      {/* Right Column: Immersive form column designed for full height integration */}
+      <div className="w-full lg:w-1/2 flex flex-col justify-between p-8 sm:p-12 lg:p-16 bg-[#06180c] border-l border-[#13311a] relative overflow-y-auto min-h-screen">
+        {/* Glow backdrop elements */}
+        <div className="absolute top-[-5%] right-[-5%] w-[350px] h-[350px] rounded-full bg-emerald-500/5 blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-[-5%] left-[-5%] w-[350px] h-[350px] rounded-full bg-[#d4a017]/5 blur-[120px] pointer-events-none" />
+        
+        {/* Top Header: Simple and clean */}
+        <div className="flex items-center justify-between w-full border-b border-[#13311a]/70 pb-5 z-10">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-[#9ca3af] tracking-widest uppercase">COPA DO MUNDO 2026</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#d4a017]/10 border border-[#d4a017]/20 rounded text-xs font-bold text-[#d4a017] uppercase">
+            <span>🇧🇷 BRASIL</span>
+          </div>
+        </div>
+
+        {/* Form area */}
+        <div className="my-auto py-8 w-full max-w-md mx-auto z-10">
           <div className="flex flex-col items-center gap-3.5 mb-8">
-            {/* Themed Badge */}
-            <div className="bg-emerald-950/40 border border-emerald-900/60 rounded-full px-3.5 py-1 flex items-center gap-1.5 mb-1">
-              <span className="w-2 h-2 rounded-full bg-[#d4a017] animate-pulse" />
-              <span className="text-[10px] font-extrabold tracking-widest text-[#d4a017] uppercase">⚽ COPA 2026 • RUMO AO HEXA</span>
+            <div className="p-3 bg-[#d4a017]/15 rounded-full border border-[#d4a017]/30 text-[#d4a017]">
+              <Trophy className="w-7 h-7" />
             </div>
-            
-            <h1 className="text-3xl font-black text-[#d4a017] tracking-tight text-center uppercase leading-none">
+            <h1 className="text-3xl font-black text-[#e8e8e8] tracking-tight text-center uppercase leading-none">
               {isForgotPassword 
                 ? "RECUPERAR SENHA" 
-                : "BOLÃO DA COPA 2026"}
+                : "BOLÃO DE PALPITES"}
             </h1>
-            <p className="text-sm text-[#9ca3af] text-center max-w-sm">
+            <p className="text-sm text-[#9ca3af] text-center max-w-xs leading-relaxed">
               {isForgotPassword
                 ? "Digite seu e-mail para receber um link de redefinição de senha"
                 : isLogin
-                ? "Entre para salvar seus palpites e ver a classificação do seu grupo"
-                : "Crie sua conta e comece a palpitar agora mesmo!"}
+                ? "Entre para gerenciar palpites e ver sua pontuação nos grupos"
+                : "Cadastre-se para disputar o ranking e mostrar que você sabe tudo!"}
             </p>
           </div>
 
@@ -2711,7 +2761,7 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
             <div
               className={`p-4 rounded-xl border text-sm mb-6 flex items-center gap-2.5 ${
                 message.type === "success"
-                  ? "bg-[#1a3d24]/20 border-[#1a3d24] text-green-400"
+                  ? "bg-emerald-950/40 border-emerald-500/30 text-green-400"
                   : "bg-red-950/20 border-red-900/40 text-red-400"
               }`}
             >
@@ -2732,7 +2782,7 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Ex: Tio João, Luisa, Marcelo..."
                   required
-                  className="w-full bg-[#08150c] border border-[#1a3d24] focus:border-[#d4a017] focus:ring-2 focus:ring-[#d4a017]/10 rounded-xl px-4 py-3.5 text-sm outline-none text-[#e8e8e8] placeholder-[#4b5563] transition-all"
+                  className="w-full bg-[#040e07] border border-[#13311a] focus:border-[#d4a017] focus:ring-2 focus:ring-[#d4a017]/10 rounded-xl px-4 py-3.5 text-sm outline-none text-[#e8e8e8] placeholder-[#4b5563] transition-all"
                 />
               </div>
             )}
@@ -2747,7 +2797,7 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="seuemail@exemplo.com"
                 required
-                className="w-full bg-[#08150c] border border-[#1a3d24] focus:border-[#d4a017] focus:ring-2 focus:ring-[#d4a017]/10 rounded-xl px-4 py-3.5 text-sm outline-none text-[#e8e8e8] placeholder-[#4b5563] transition-all"
+                className="w-full bg-[#040e07] border border-[#13311a] focus:border-[#d4a017] focus:ring-2 focus:ring-[#d4a017]/10 rounded-xl px-4 py-3.5 text-sm outline-none text-[#e8e8e8] placeholder-[#4b5563] transition-all"
               />
             </div>
 
@@ -2764,9 +2814,9 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
                         setIsForgotPassword(true);
                         setMessage(null);
                       }}
-                      className="text-xs text-[#d4a017] hover:underline cursor-pointer"
+                      className="text-xs text-[#d4a017] hover:underline cursor-pointer font-bold"
                     >
-                      Esqueceu sua senha?
+                      Esqueceu a senha?
                     </button>
                   )}
                 </div>
@@ -2777,12 +2827,12 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
                     required
-                    className="w-full bg-[#08150c] border border-[#1a3d24] focus:border-[#d4a017] focus:ring-2 focus:ring-[#d4a017]/10 rounded-xl pl-4 pr-11 py-3.5 text-sm outline-none text-[#e8e8e8] placeholder-[#4b5563] transition-all"
+                    className="w-full bg-[#040e07] border border-[#13311a] focus:border-[#d4a017] focus:ring-2 focus:ring-[#d4a017]/10 rounded-xl pl-4 pr-11 py-3.5 text-sm outline-none text-[#e8e8e8] placeholder-[#4b5563] transition-all"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[#d4a017] transition-all cursor-pointer"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#9ca3af] hover:text-[#d4a017] transition-all cursor-pointer"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -2793,19 +2843,19 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-[#d4a017] to-[#e6b422] hover:from-[#b8860b] hover:to-[#d4a017] text-[#0a1a0f] disabled:bg-gray-600 disabled:text-gray-300 font-extrabold py-3.5 px-4 rounded-xl text-sm transition-all duration-300 cursor-pointer shadow-lg shadow-[#d4a017]/10 uppercase tracking-widest flex items-center justify-center gap-2 mt-2"
+              className="w-full bg-gradient-to-r from-[#d4a017] to-[#e6b422] hover:from-[#b8860b] hover:to-[#d4a017] text-[#040e07] disabled:bg-gray-700 disabled:text-gray-400 font-black py-4 px-4 rounded-xl text-sm transition-all duration-300 cursor-pointer shadow-lg shadow-[#d4a017]/10 uppercase tracking-widest flex items-center justify-center gap-2 mt-2"
             >
               {loading 
                 ? "Processando..." 
                 : isForgotPassword 
-                ? "Enviar E-mail de Recuperação" 
+                ? "Enviar Link de Recuperação" 
                 : isLogin 
                 ? "Entrar no Bolão" 
-                : "Criar Minha Conta"}
+                : "Cadastrar no Bolão"}
             </button>
           </form>
 
-          <div className="mt-8 pt-6 border-t border-[#1a3d24]/65 text-center">
+          <div className="mt-8 text-center">
             {isForgotPassword ? (
               <button
                 type="button"
@@ -2813,7 +2863,7 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
                   setIsForgotPassword(false);
                   setMessage(null);
                 }}
-                className="text-sm text-[#9ca3af] hover:text-[#d4a017] transition-all cursor-pointer font-semibold"
+                className="text-sm text-[#9ca3af] hover:text-[#d4a017] transition-all cursor-pointer font-bold"
               >
                 Voltar para o login
               </button>
@@ -2824,12 +2874,19 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
                   setIsLogin(!isLogin);
                   setMessage(null);
                 }}
-                className="text-sm text-[#9ca3af] hover:text-[#d4a017] transition-all cursor-pointer font-semibold"
+                className="text-sm text-[#9ca3af] hover:text-[#d4a017] transition-all cursor-pointer font-bold animate-pulse"
               >
-                {isLogin ? "Ainda não tem conta? Crie uma aqui" : "Já possui conta? Faça login"}
+                {isLogin ? "Ainda não tem conta? Crie uma aqui 🇧🇷" : "Já possui conta? Faça login"}
               </button>
             )}
           </div>
+        </div>
+
+        {/* Bottom decorative stats / info */}
+        <div className="border-t border-[#13311a]/70 pt-5 w-full z-10 text-center lg:text-left">
+          <p className="text-[10px] text-[#6b7280] leading-relaxed">
+            Plataforma 100% gratuita para diversão familiar e entre amigos. Os palpites podem ser alterados até o pontapé inicial de cada jogo. Boa sorte!
+          </p>
         </div>
       </div>
     </div>
