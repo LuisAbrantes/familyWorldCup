@@ -87,6 +87,18 @@ export default function LandingPage() {
           Copa do Mundo de 2026
         </div>
 
+        {/* Test Room Alert Banner */}
+        <div className="max-w-2xl mb-8 p-4 rounded-2xl border border-[#d4a017]/30 bg-[#d4a017]/5 flex items-start gap-3 text-left text-xs text-[#e8e8e8] animate-fadeIn">
+          <span className="text-lg mt-0.5">🧪</span>
+          <div>
+            <p className="font-extrabold text-[#d4a017] uppercase tracking-wide text-xs">Teste Grátis a Plataforma!</p>
+            <p className="mt-1 text-[#9ca3af] leading-relaxed">
+              Quer experimentar o sistema antes de adquirir o seu grupo? Acesse o painel e entre no grupo público usando o código de convite <span className="font-mono font-bold text-[#e8e8e8] bg-[#1a3d24]/60 px-2 py-0.5 rounded border border-[#2d5c38] text-[10px]">TESTE</span>.
+              <span className="block font-bold text-[#d4a017]/95 mt-1.5">⚠️ Importante: Esta sala é destinada exclusivamente para testes e será permanentemente desativada antes do início da Copa.</span>
+            </p>
+          </div>
+        </div>
+
         <h1 className="text-4xl sm:text-6xl md:text-7xl font-black italic text-gold-gradient tracking-tight leading-tight max-w-4xl uppercase">
           Organize o seu bolão da Copa e compita com seus amigos
         </h1>
