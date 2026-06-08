@@ -54,7 +54,7 @@ Estas variáveis precisam estar configuradas na Vercel (Settings → Environment
 
 ## 🚀 Status do Deploy
 
-* **Commit mais recente:** `1711276` - fix: add prepare:false for Supabase pooler
+* **Commit mais recente:** `e40c410` - Expose detailed auth errors on 401 response
 * **GitHub:** Sincronizado com `origin/main`
 * **Vercel:** Deploy automático acionado. Aguardando conclusão.
 
@@ -65,5 +65,6 @@ Estas variáveis precisam estar configuradas na Vercel (Settings → Environment
 - [x] `db/index.ts` com `prepare: false` para pooler Supabase
 - [x] ID do admin atualizado para UUID Supabase no `.env.local`
 - [x] Registro `clerk_user_id` no banco atualizado para UUID Supabase
+- [x] Implementação de debug endpoint (`/api/debug`) e detalhes no 401
 - [ ] Variáveis de ambiente configuradas na Vercel
 - [ ] Deploy concluído com sucesso na Vercel
