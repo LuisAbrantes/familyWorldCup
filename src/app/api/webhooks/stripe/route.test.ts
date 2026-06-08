@@ -12,6 +12,12 @@ vi.mock("@/db", () => {
         authorizedCreators: {
           findFirst: vi.fn(),
         },
+        rooms: {
+          findFirst: vi.fn(),
+        },
+        users: {
+          findFirst: vi.fn(),
+        },
       },
     },
   };
@@ -32,6 +38,8 @@ vi.mock("stripe", () => {
 beforeEach(() => {
   vi.clearAllMocks();
   process.env.NODE_ENV = "test";
+  vi.mocked(db.query.rooms.findFirst).mockResolvedValue(null as any);
+  vi.mocked(db.query.users.findFirst).mockResolvedValue({ id: 1, displayName: "Luis" } as any);
 });
 
 test("POST /api/webhooks/stripe inserts new authorized creator if email doesn't exist", async () => {

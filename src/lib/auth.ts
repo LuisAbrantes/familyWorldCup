@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { db } from "@/db";
-import { users, authorizedCreators, roomMembers } from "@/db/schema";
+import { users, authorizedCreators, roomMembers, rooms } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 
 let memoizedAdminIds: Set<string> | null = null;
@@ -95,6 +95,49 @@ export async function getOrCreateLocalUserDetailed(req?: Request): Promise<{ use
         } catch (updateErr) {
           console.warn("[Auth] Failed to sync display name or email:", updateErr);
         }
+      }
+    }
+
+    // Claim pre-assigned rooms
+    if (localUser && localUser.email) {
+      const userEmail = localUser.email.toLowerCase().trim();
+      try {
+        const preAssignedRooms = await db.query.rooms.findMany({
+          where: eq(rooms.adminEmail, userEmail),
+        });
+
+        for (const room of preAssignedRooms) {
+          // Update creatorUserId if not already correct
+          if (room.creatorUserId !== localUser.id) {
+            await db
+              .update(rooms)
+              .set({ creatorUserId: localUser.id })
+              .where(eq(rooms.id, room.id));
+          }
+
+          // Check if already a member
+          const existingMember = await db.query.roomMembers.findFirst({
+            where: and(
+              eq(roomMembers.roomId, room.id),
+              eq(roomMembers.userId, localUser.id)
+            )
+          });
+
+          if (!existingMember) {
+            await db.insert(roomMembers).values({
+              roomId: room.id,
+              userId: localUser.id,
+              role: "admin",
+            });
+          } else if (existingMember.role !== "admin") {
+            await db
+              .update(roomMembers)
+              .set({ role: "admin" })
+              .where(eq(roomMembers.id, existingMember.id));
+          }
+        }
+      } catch (claimErr) {
+        console.error("[Auth] Error claiming pre-assigned rooms:", claimErr);
       }
     }
 

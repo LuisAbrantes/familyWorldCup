@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { rooms, roomMembers, authorizedCreators } from "@/db/schema";
+import { rooms, roomMembers, authorizedCreators, users } from "@/db/schema";
 import { getOrCreateLocalUser, isAdmin, isEmailAuthorizedCreator } from "@/lib/auth";
 import { eq, and } from "drizzle-orm";
 
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { name } = await req.json();
+    const { name, adminEmail } = await req.json();
     if (!name || typeof name !== "string" || name.trim().length < 3) {
       return NextResponse.json({ error: "Nome do grupo deve ter pelo menos 3 caracteres" }, { status: 400 });
     }
@@ -68,6 +68,21 @@ export async function POST(req: Request) {
         { error: "Você precisa de autorização por e-mail para criar um grupo. Fale com o organizador no WhatsApp." },
         { status: 403 }
       );
+    }
+
+    // Determine creator user ID and admin email
+    let targetCreatorUserId = localUser.id;
+    let targetAdminEmail: string | null = null;
+    let targetUser: any = null;
+
+    if (adminEmail && typeof adminEmail === "string" && isSuper) {
+      targetAdminEmail = adminEmail.toLowerCase().trim();
+      targetUser = await db.query.users.findFirst({
+        where: eq(users.email, targetAdminEmail),
+      });
+      if (targetUser) {
+        targetCreatorUserId = targetUser.id;
+      }
     }
 
     // Generate unique 6-character invite code
@@ -96,17 +111,20 @@ export async function POST(req: Request) {
         .values({
           name: name.trim(),
           inviteCode,
-          creatorUserId: localUser.id,
+          creatorUserId: targetCreatorUserId,
+          adminEmail: targetAdminEmail,
         })
         .returning();
 
       const createdRoom = insertedRooms[0];
 
+      // Add targetUser as admin if they exist, otherwise add the super admin who created it
       await tx.insert(roomMembers).values({
         roomId: createdRoom.id,
-        userId: localUser.id,
+        userId: targetUser ? targetUser.id : localUser.id,
         role: "admin",
       });
+
 
       // Decrement authorizedCreators allowance if not super admin
       if (!isSuper && localUser.email) {

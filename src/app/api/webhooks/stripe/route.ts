@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { db } from "@/db";
-import { authorizedCreators } from "@/db/schema";
+import { authorizedCreators, rooms, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
 export async function POST(req: Request) {
@@ -56,6 +56,46 @@ export async function POST(req: Request) {
           });
         }
         console.log(`[Stripe Webhook] Successfully authorized ${email}`);
+
+        // Pre-create room for the user
+        const existingRoom = await db.query.rooms.findFirst({
+          where: eq(rooms.adminEmail, email),
+        });
+
+        if (!existingRoom) {
+          // Find any user to act as temporary creator (usually super admin or the first user)
+          const firstUser = await db.query.users.findFirst();
+          const creatorUserId = firstUser ? firstUser.id : 1; // Fallback to 1 if no users exist yet
+
+          // Generate unique 6-character invite code
+          let inviteCode = "";
+          let isUnique = false;
+          let attempts = 0;
+          while (!isUnique && attempts < 10) {
+            inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+            const existingCode = await db.query.rooms.findFirst({
+              where: eq(rooms.inviteCode, inviteCode),
+            });
+            if (!existingCode) {
+              isUnique = true;
+            }
+            attempts++;
+          }
+          if (!isUnique) {
+            inviteCode = `COPA${Math.floor(10 + Math.random() * 90)}`;
+          }
+
+          const emailPrefix = email.split("@")[0];
+          const roomName = `Grupo de ${emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1)}`;
+
+          await db.insert(rooms).values({
+            name: roomName,
+            inviteCode,
+            creatorUserId,
+            adminEmail: email,
+          });
+          console.log(`[Stripe Webhook] Automatically pre-created room "${roomName}" for ${email}`);
+        }
       } catch (dbErr) {
         console.error("[Stripe Webhook] Database error:", dbErr);
         return NextResponse.json({ error: "Database update failed" }, { status: 500 });

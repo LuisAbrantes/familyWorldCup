@@ -204,6 +204,13 @@ export default function Home() {
   const [submittingAuthEmail, setSubmittingAuthEmail] = useState(false);
   const [authEmailFeedback, setAuthEmailFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  // Manual room creation states
+  const [manualRoomName, setManualRoomName] = useState("");
+  const [manualRoomAdminEmail, setManualRoomAdminEmail] = useState("");
+  const [creatingManualRoom, setCreatingManualRoom] = useState(false);
+  const [manualRoomFeedback, setManualRoomFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+
   // Action states
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -359,6 +366,49 @@ export default function Home() {
       console.error("Erro ao revogar autorização:", err);
     }
   };
+
+  const handleCreateManualRoom = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualRoomName.trim() || !manualRoomAdminEmail.trim()) return;
+    setCreatingManualRoom(true);
+    setManualRoomFeedback(null);
+    try {
+      const res = await fetchWithAuth("/api/rooms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: manualRoomName.trim(),
+          adminEmail: manualRoomAdminEmail.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao criar grupo.");
+
+      setManualRoomFeedback({
+        type: "success",
+        text: `Grupo "${data.room.name}" criado com sucesso! Código de convite: ${data.room.inviteCode}`,
+      });
+      setManualRoomName("");
+      setManualRoomAdminEmail("");
+      
+      // Refresh user rooms list
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const roomsRes = await fetch("/api/rooms", {
+          headers: { Authorization: `Bearer ${session.access_token}` }
+        });
+        if (roomsRes.ok) {
+          const roomsData = await roomsRes.json();
+          setRoomsList(roomsData.rooms || []);
+        }
+      }
+    } catch (err: any) {
+      setManualRoomFeedback({ type: "error", text: err.message });
+    } finally {
+      setCreatingManualRoom(false);
+    }
+  };
+
 
   const handleDeleteUser = async (id: number) => {
     if (!confirm("Tem certeza que deseja remover este participante? Todos os palpites dele serão excluídos permanentemente.")) {
@@ -2219,6 +2269,50 @@ export default function Home() {
                     >
                       {authEmailFeedback.type === "success" ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
                       <span>{authEmailFeedback.text}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="card-glass rounded-2xl p-6 border border-[#1a3d24]">
+                  <h4 className="text-sm font-bold text-[#e8e8e8] mb-3">Criar & Atribuir Grupo Manualmente</h4>
+                  <p className="text-xs text-[#9ca3af] mb-4">
+                    Crie o grupo diretamente e defina o e-mail do administrador. Se o usuário já tiver conta, o grupo aparecerá imediatamente para ele. Se não, o grupo será atribuído assim que ele se cadastrar.
+                  </p>
+                  <form onSubmit={handleCreateManualRoom} className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="text"
+                      placeholder="Nome do Grupo (mín. 3 letras)"
+                      value={manualRoomName}
+                      onChange={(e) => setManualRoomName(e.target.value)}
+                      required
+                      className="flex-1 bg-[#0a1a0f] border border-[#1a3d24] rounded-lg py-2 px-3 text-sm text-[#e8e8e8] placeholder:text-[#6b7280] focus:outline-none focus:border-[#d4a017]"
+                    />
+                    <input
+                      type="email"
+                      placeholder="email-do-dono@exemplo.com"
+                      value={manualRoomAdminEmail}
+                      onChange={(e) => setManualRoomAdminEmail(e.target.value)}
+                      required
+                      className="flex-1 bg-[#0a1a0f] border border-[#1a3d24] rounded-lg py-2 px-3 text-sm text-[#e8e8e8] placeholder:text-[#6b7280] focus:outline-none focus:border-[#d4a017]"
+                    />
+                    <button
+                      type="submit"
+                      disabled={creatingManualRoom}
+                      className="bg-[#d4a017] hover:bg-[#b8860b] text-[#0a1a0f] py-2 px-4 rounded-lg text-xs font-bold transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {creatingManualRoom ? "Criando..." : "Criar & Atribuir"}
+                    </button>
+                  </form>
+                  {manualRoomFeedback && (
+                    <div
+                      className={`mt-3 p-3 rounded-lg border text-sm flex items-center gap-2 ${
+                        manualRoomFeedback.type === "success"
+                          ? "bg-emerald-950/20 border-emerald-900/50 text-emerald-400"
+                          : "bg-red-950/20 border-red-900/50 text-red-400"
+                      }`}
+                    >
+                      {manualRoomFeedback.type === "success" ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                      <span>{manualRoomFeedback.text}</span>
                     </div>
                   )}
                 </div>
