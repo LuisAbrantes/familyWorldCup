@@ -106,6 +106,7 @@ export async function POST(req: Request) {
 
     // Create room and add creator as member
     const newRoom = await db.transaction(async (tx) => {
+      const isCreatorSuper = isSuper && targetCreatorUserId === localUser.id;
       const insertedRooms = await tx
         .insert(rooms)
         .values({
@@ -113,6 +114,7 @@ export async function POST(req: Request) {
           inviteCode,
           creatorUserId: targetCreatorUserId,
           adminEmail: targetAdminEmail,
+          maxMembers: isCreatorSuper ? 99999 : 15,
         })
         .returning();
 
