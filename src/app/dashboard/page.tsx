@@ -994,7 +994,7 @@ export default function Home() {
                         R$ 15 por grupo (com limite de até 15 participantes - negociável direto com o administrador).
                       </div>
                       <div className="text-[11px] text-[#9ca3af] italic leading-normal">
-                        Adquira sua licença de forma 100% automatizada via Stripe ou pague no PIX pelo WhatsApp!
+                        Adquira o seu grupo de forma automática ou compre direto no Pix pelo WhatsApp!
                       </div>
                       <a
                         href="https://buy.stripe.com/eVq4gBgHJ4u63XE5RD28802"
@@ -1002,7 +1002,7 @@ export default function Home() {
                         rel="noopener noreferrer"
                         className="w-full bg-[#d4a017] hover:bg-[#b8860b] text-[#0a1a0f] py-2.5 rounded-lg text-xs font-black uppercase tracking-wide text-center transition-all block shadow-lg shadow-[#d4a017]/10 cursor-pointer"
                       >
-                        Comprar Sala via Stripe
+                        Comprar Sala Online (Pix/Cartão)
                       </a>
                       <a
                         href={`https://wa.me/5512981451610?text=Ol%C3%A1!%20Gostaria%20de%20criar%20uma%20sala%20no%20bol%C3%A3o.%20Meu%20e-mail%20cadastrado%20%C3%A9%3A%20${encodeURIComponent(user.email || "")}`}

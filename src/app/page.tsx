@@ -22,19 +22,23 @@ export default function LandingPage() {
   const faqs = [
     {
       q: "Como os resultados dos jogos são atualizados?",
-      a: "Tudo é 100% automático! Nosso sistema se integra diretamente com a API oficial do football-data.org. Assim que uma partida termina, os placares são atualizados e os pontos de todos os participantes são recalculados na mesma hora.",
+      a: "Tudo é 100% automático! Nossa plataforma acompanha as partidas em tempo real. Assim que o árbitro apita o fim do jogo, os placares são atualizados no painel e os pontos de todos os participantes do seu grupo são recalculados instantaneamente.",
     },
     {
-      q: "Como funciona a liberação da sala após a compra?",
-      a: "Ao clicar em 'Criar Meu Bolão', você será redirecionado para a página de checkout seguro da Stripe. Após o pagamento, nosso webhook identifica seu e-mail de compra e libera imediatamente a permissão para criar o seu grupo. Basta logar com o mesmo e-mail no site!",
+      q: "Como funciona a liberação do grupo após a compra?",
+      a: "Assim que o pagamento da taxa única de R$ 15 for confirmado pelo Stripe (seja por Pix ou cartão), seu e-mail de compra é liberado no nosso sistema. Depois disso, basta fazer login no site com esse mesmo e-mail e criar o seu grupo em segundos.",
+    },
+    {
+      q: "O que ESTÁ e o que NÃO ESTÁ incluso no bolão?",
+      a: "Nosso foco é a simplicidade e a automação do bolão. ESTÁ INCLUSO: sala privada para até 15 participantes, todos os jogos da Copa do Mundo, placares e ranking atualizados de forma automática, proteção contra cópia de palpites e painel com estatísticas da sala. NÃO ESTÁ INCLUSO: palpites sobre jogadores específicos (quem vai fazer gol, cartões, artilharia, assistências) e cobrança automática de apostas entre os membros (qualquer dinheiro apostado entre vocês deve ser recolhido por fora; nós apenas fornecemos o sistema do bolão).",
     },
     {
       q: "Posso convidar mais de 15 pessoas?",
-      a: "O limite padrão por sala é de 15 participantes. Caso precise de mais vagas para um bolão corporativo ou um grupo maior, compre a sala normalmente e fale com a gente no WhatsApp para negociar um upgrade de vagas personalizado por um valor amigável.",
+      a: "O limite padrão por sala é de 15 participantes para garantir o bom desempenho do servidor. Se você precisar de mais vagas para um grupo da firma ou uma família muito grande, compre a sala normalmente e entre em contato conosco pelo WhatsApp para solicitar um upgrade de vagas por um valor adicional bem acessível.",
     },
     {
       q: "Consigo participar de mais de um grupo com a mesma conta?",
-      a: "Sim! Você pode criar sua conta e entrar em múltiplos grupos utilizando códigos de convite diferentes. No topo do painel, um seletor permite alternar instantaneamente entre os seus grupos.",
+      a: "Sim! Você pode usar a sua conta para entrar em quantos grupos quiser, bastando digitar o código de convite de cada um. No topo do seu painel, você verá um menu simples para alternar entre os seus grupos a qualquer momento.",
     },
   ];
 
@@ -84,28 +88,34 @@ export default function LandingPage() {
         </div>
 
         <h1 className="text-4xl sm:text-6xl md:text-7xl font-black italic text-gold-gradient tracking-tight leading-tight max-w-4xl uppercase">
-          O melhor bolão da copa com a sua galera
+          Organize o bolão da Copa sem planilhas ou dor de cabeça
         </h1>
         <p className="mt-6 text-[#9ca3af] text-base sm:text-xl max-w-2xl leading-relaxed">
-          Crie grupos privados, convide seus amigos, dê palpites de placar e acompanhe a classificação em tempo real de forma 100% automatizada.
+          Crie seu grupo privado, convide a galera e deixe que a nossa plataforma cuide de atualizar os placares, calcular os pontos e atualizar a classificação na hora!
         </p>
 
-        <div className="mt-10 flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
-          <a
-            href="https://buy.stripe.com/eVq4gBgHJ4u63XE5RD28802"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-[#d4a017] to-[#b8860b] hover:from-[#e6b422] hover:to-[#d4a017] text-[#0a1a0f] font-black text-sm uppercase rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-xl shadow-[#d4a017]/20 group cursor-pointer"
-          >
-            Criar Nosso Bolão
-            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-          </a>
-          <Link
-            href="/dashboard"
-            className="w-full sm:w-auto px-8 py-4 bg-[#1a3d24]/60 hover:bg-[#1a3d24] border border-[#2d5c38] text-[#e8e8e8] font-bold text-sm uppercase rounded-xl transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
-          >
-            Acessar Meus Grupos
-          </Link>
+        <div className="mt-10 flex flex-col items-center gap-4 w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+            <a
+              href="https://buy.stripe.com/eVq4gBgHJ4u63XE5RD28802"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-[#d4a017] to-[#b8860b] hover:from-[#e6b422] hover:to-[#d4a017] text-[#0a1a0f] font-black text-sm uppercase rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-xl shadow-[#d4a017]/20 group cursor-pointer"
+            >
+              Criar Nosso Bolão
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </a>
+            <Link
+              href="/dashboard"
+              className="w-full sm:w-auto px-8 py-4 bg-[#1a3d24]/60 hover:bg-[#1a3d24] border border-[#2d5c38] text-[#e8e8e8] font-bold text-sm uppercase rounded-xl transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
+            >
+              Acessar Meus Grupos
+            </Link>
+          </div>
+          <p className="mt-2 text-xs text-[#6b7280] flex items-center gap-1.5 justify-center">
+            <Shield className="w-3.5 h-3.5 text-[#d4a017]" />
+            Taxa única de R$ 15 por sala • Liberação automática via Stripe (Pix ou Cartão)
+          </p>
         </div>
 
         {/* Dashboard Mockup */}
@@ -144,7 +154,7 @@ export default function LandingPage() {
               Recursos Premium do Bolão
             </h2>
             <p className="mt-3 text-[#9ca3af] text-sm sm:text-base">
-              Desenvolvemos a melhor experiência para você competir e vibrar a cada gol da Copa do Mundo.
+              Tudo o que você precisa para competir e brincar com seu grupo de forma simples e divertida.
             </p>
           </div>
 
@@ -153,9 +163,9 @@ export default function LandingPage() {
               <div className="w-12 h-12 rounded-xl bg-[#d4a017]/10 border border-[#d4a017]/25 flex items-center justify-center text-[#d4a017]">
                 <RefreshCw className="w-6 h-6" />
               </div>
-              <h3 className="font-bold text-lg text-[#e8e8e8]">Placares 100% Automáticos</h3>
+              <h3 className="font-bold text-lg text-[#e8e8e8]">Atualização Automática</h3>
               <p className="text-xs text-[#9ca3af] leading-relaxed">
-                Resultados atualizados automaticamente. Acabou a partida, a pontuação é calculada e o ranking atualiza na hora.
+                Chega de preencher placares à mão. Assim que a partida oficial termina, a pontuação é recalculada e a tabela atualiza na mesma hora.
               </p>
             </div>
 
@@ -163,9 +173,9 @@ export default function LandingPage() {
               <div className="w-12 h-12 rounded-xl bg-[#d4a017]/10 border border-[#d4a017]/25 flex items-center justify-center text-[#d4a017]">
                 <Lock className="w-6 h-6" />
               </div>
-              <h3 className="font-bold text-lg text-[#e8e8e8]">Proteção Anti-Spoiler</h3>
+              <h3 className="font-bold text-lg text-[#e8e8e8]">Sem Espiar Palpites</h3>
               <p className="text-xs text-[#9ca3af] leading-relaxed">
-                Você só consegue ver o palpite dos outros participantes em jogos pendentes após ter salvado o seu próprio palpite.
+                Ninguém copia palpite de ninguém. Os palpites dos outros participantes só ficam visíveis para você em jogos pendentes depois que você salvar o seu.
               </p>
             </div>
 
@@ -173,9 +183,9 @@ export default function LandingPage() {
               <div className="w-12 h-12 rounded-xl bg-[#d4a017]/10 border border-[#d4a017]/25 flex items-center justify-center text-[#d4a017]">
                 <BarChart3 className="w-6 h-6" />
               </div>
-              <h3 className="font-bold text-lg text-[#e8e8e8]">Dashboard de Estatísticas</h3>
+              <h3 className="font-bold text-lg text-[#e8e8e8]">Estatísticas da Galera</h3>
               <p className="text-xs text-[#9ca3af] leading-relaxed">
-                Métricas completas de engajamento do grupo, jogos mais quentes, distribuição de pontos e muito mais.
+                Acompanhe o desempenho geral da sua galera, quem está pontuando mais em cada fase e quem é o maior azarão do grupo.
               </p>
             </div>
 
@@ -183,9 +193,9 @@ export default function LandingPage() {
               <div className="w-12 h-12 rounded-xl bg-[#d4a017]/10 border border-[#d4a017]/25 flex items-center justify-center text-[#d4a017]">
                 <Trophy className="w-6 h-6" />
               </div>
-              <h3 className="font-bold text-lg text-[#e8e8e8]">Regras Claras de Pontuação</h3>
+              <h3 className="font-bold text-lg text-[#e8e8e8]">Pontuação Justa</h3>
               <p className="text-xs text-[#9ca3af] leading-relaxed">
-                Placar exato (10 pts), resultado com mesmo saldo (7 pts), vencedor da partida (5 pts) ou erro (0 pts).
+                Sistema de pontos claro: 10 pontos para placar exato, 7 pontos para acerto de vencedor + saldo, 5 pontos para acerto simples de vencedor e 0 para erros.
               </p>
             </div>
           </div>
@@ -199,37 +209,37 @@ export default function LandingPage() {
             Como Funciona?
           </h2>
           <p className="mt-3 text-[#9ca3af] text-sm sm:text-base">
-            Do pagamento à disputa do troféu, tudo é feito de forma simples e rápida.
+            Da confirmação do pagamento à disputa da taça, tudo é feito em poucos passos.
           </p>
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 relative">
           <div className="flex flex-col gap-4 relative">
             <span className="text-5xl font-black text-[#1a3d24]">01</span>
-            <h3 className="font-extrabold text-lg text-[#e8e8e8]">Adquira a Sala</h3>
+            <h3 className="font-extrabold text-lg text-[#e8e8e8]">Compre sua Sala</h3>
             <p className="text-xs text-[#9ca3af] leading-relaxed">
-              Pague a taxa única de R$ 15,00 de forma 100% segura através do checkout da Stripe.
+              Pague a taxa única de R$ 15 com total segurança usando Pix ou Cartão de Crédito.
             </p>
           </div>
           <div className="flex flex-col gap-4 relative">
             <span className="text-5xl font-black text-[#1a3d24]">02</span>
             <h3 className="font-extrabold text-lg text-[#e8e8e8]">Crie o Grupo</h3>
             <p className="text-xs text-[#9ca3af] leading-relaxed">
-              Logue no site com o mesmo e-mail e crie seu grupo em segundos. Um código de 6 letras será gerado.
+              Acesse o site com o mesmo e-mail de compra para criar o seu grupo. O sistema gera um código exclusivo de convite na hora.
             </p>
           </div>
           <div className="flex flex-col gap-4 relative">
             <span className="text-5xl font-black text-[#1a3d24]">03</span>
-            <h3 className="font-extrabold text-lg text-[#e8e8e8]">Convide Seus Amigos</h3>
+            <h3 className="font-extrabold text-lg text-[#e8e8e8]">Chame a Galera</h3>
             <p className="text-xs text-[#9ca3af] leading-relaxed">
-              Envie o código de convite para os participantes. Eles entram na sua sala digitando o código na aba Grupos.
+              Envie o código gerado para seus amigos por WhatsApp. Eles entram na sala em segundos inserindo o código no painel.
             </p>
           </div>
           <div className="flex flex-col gap-4 relative">
             <span className="text-5xl font-black text-[#1a3d24]">04</span>
-            <h3 className="font-extrabold text-lg text-[#e8e8e8]">Dê os Palpites</h3>
+            <h3 className="font-extrabold text-lg text-[#e8e8e8]">Palpite e Dispute</h3>
             <p className="text-xs text-[#9ca3af] leading-relaxed">
-              Todos registram seus palpites de placar para os jogos antes de começarem e disputam o topo do ranking!
+              Cada participante registra seus palpites de placar antes do início de cada partida e disputa o topo da classificação!
             </p>
           </div>
         </div>
@@ -263,19 +273,19 @@ export default function LandingPage() {
             <ul className="space-y-4 mb-8 text-left text-xs text-[#9ca3af]">
               <li className="flex items-center gap-2.5">
                 <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Até 15 participantes inclusos</span>
+                <span>Até 15 participantes inclusos na sala</span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Atualizações de jogos e placares automáticas</span>
+                <span>Resultados oficiais atualizados automaticamente</span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Spoiler protection ativo para palpites sociais</span>
+                <span>Visualização protegida contra spoilers</span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Estatísticas de participante e dashboard admin</span>
+                <span>Painel de estatísticas e controle total do grupo</span>
               </li>
             </ul>
 
