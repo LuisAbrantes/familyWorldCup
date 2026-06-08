@@ -1447,7 +1447,8 @@ export default function Home() {
                     <table className="w-full text-left border-collapse text-sm">
                       <thead>
                         <tr className="bg-[#0f2a18] text-[#9ca3af] font-bold border-b border-[#1a3d24]">
-                          <th className="p-4">Nome</th>
+                          <th className="p-4">Nome (Nick)</th>
+                          <th className="p-4">E-mail</th>
                           <th className="p-4">Palpites</th>
                           <th className="p-4">Pontuação</th>
                           <th className="p-4 text-right">Ações</th>
@@ -1465,6 +1466,9 @@ export default function Home() {
                                     Você
                                   </span>
                                 )}
+                              </td>
+                              <td className="p-4 text-[#9ca3af]">
+                                {u.email}
                               </td>
                               <td className="p-4 text-[#9ca3af]">
                                 {u.totalPredictions} / {matches.length}
@@ -1662,7 +1666,7 @@ export default function Home() {
                         <table className="w-full text-left border-collapse text-xs">
                           <thead>
                             <tr className="bg-[#0f2a18] text-[#9ca3af] font-bold border-b border-[#1a3d24]">
-                              <th className="p-3">Nome</th>
+                              <th className="p-3">Nome (Nick)</th>
                               <th className="p-3 text-center">Palpites Feitos</th>
                               <th className="p-3 text-center">Cobertura</th>
                               <th className="p-3 text-center">Exatos (10 pts)</th>
@@ -1673,7 +1677,10 @@ export default function Home() {
                           <tbody className="divide-y divide-[#1a3d24]/50">
                             {adminStats.participantEngagement.map((p: any) => (
                               <tr key={p.userId} className="hover:bg-[#0d2214]/40 transition-colors">
-                                <td className="p-3 font-bold text-[#e8e8e8]">{p.displayName}</td>
+                                <td className="p-3 text-[#e8e8e8]">
+                                  <div className="font-bold">{p.displayName}</div>
+                                  <div className="text-[10px] text-[#9ca3af] font-normal">{p.email}</div>
+                                </td>
                                 <td className="p-3 text-center text-[#9ca3af]">{p.predictionCount} / {matches.length}</td>
                                 <td className="p-3 text-center font-semibold text-[#e8e8e8]">{p.coveragePercent}%</td>
                                 <td className="p-3 text-center text-emerald-400 font-bold">{p.exactScores}</td>

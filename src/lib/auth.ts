@@ -48,6 +48,8 @@ export async function getOrCreateLocalUserDetailed(req?: Request): Promise<{ use
       where: eq(users.clerkUserId, clerkUserId),
     });
 
+    const email = supabaseUser.email || null;
+
     if (!localUser) {
       const displayName = supabaseUser.user_metadata?.display_name 
         || supabaseUser.user_metadata?.first_name 
@@ -59,10 +61,11 @@ export async function getOrCreateLocalUserDetailed(req?: Request): Promise<{ use
           .values({
             clerkUserId,
             displayName,
+            email,
           })
           .onConflictDoUpdate({
             target: users.clerkUserId,
-            set: { displayName }
+            set: { displayName, email }
           })
           .returning();
         
@@ -74,23 +77,23 @@ export async function getOrCreateLocalUserDetailed(req?: Request): Promise<{ use
         });
       }
     } else {
-      // Sync display name if it changed in Supabase metadata
+      // Sync display name or email if they changed in Supabase metadata
       const metaName = supabaseUser.user_metadata?.display_name 
         || supabaseUser.user_metadata?.first_name 
         || supabaseUser.email?.split("@")[0] 
         || "Participante";
         
-      if (localUser.displayName !== metaName) {
+      if (localUser.displayName !== metaName || localUser.email !== email) {
         try {
           const result = await db.update(users)
-            .set({ displayName: metaName })
+            .set({ displayName: metaName, email })
             .where(eq(users.clerkUserId, clerkUserId))
             .returning();
           if (result[0]) {
             localUser = result[0];
           }
         } catch (updateErr) {
-          console.warn("[Auth] Failed to sync display name:", updateErr);
+          console.warn("[Auth] Failed to sync display name or email:", updateErr);
         }
       }
     }

@@ -42,13 +42,14 @@ export async function GET(req: Request) {
     const rawEngagement = await db.select({
       userId: users.id,
       displayName: users.displayName,
+      email: users.email,
       predictionCount: count(predictions.id),
       totalPoints: sum(predictions.pointsAwarded),
       exactScores: sql<number>`count(case when ${predictions.pointsAwarded} = 10 then 1 end)`,
     })
     .from(users)
     .leftJoin(predictions, eq(predictions.userId, users.id))
-    .groupBy(users.id, users.displayName);
+    .groupBy(users.id, users.displayName, users.email);
 
     const participantEngagement = rawEngagement.map(row => {
       const predictionCount = row.predictionCount || 0;
@@ -56,6 +57,7 @@ export async function GET(req: Request) {
       return {
         userId: row.userId,
         displayName: row.displayName,
+        email: row.email || "Não informado",
         predictionCount,
         coveragePercent: totalMatches > 0 ? Math.round((predictionCount / totalMatches) * 100) : 0,
         totalPoints,

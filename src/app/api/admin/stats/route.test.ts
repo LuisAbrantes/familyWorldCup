@@ -58,8 +58,8 @@ test("GET /api/admin/stats returns correct stats structure when user is admin", 
       { matchId: 2, predCount: 3 },
     ])) // 5. Full participation
     .mockReturnValueOnce(createMockChain([
-      { userId: 1, displayName: "User A", predictionCount: 20, totalPoints: "150", exactScores: 8 },
-      { userId: 2, displayName: "User B", predictionCount: 15, totalPoints: "100", exactScores: 5 },
+      { userId: 1, displayName: "User A", email: "usera@example.com", predictionCount: 20, totalPoints: "150", exactScores: 8 },
+      { userId: 2, displayName: "User B", email: null, predictionCount: 15, totalPoints: "100", exactScores: 5 },
     ])) // 6. Engagement
     .mockReturnValueOnce(createMockChain([
       { points: 10, count: 12 },
@@ -92,6 +92,7 @@ test("GET /api/admin/stats returns correct stats structure when user is admin", 
   expect(data.participantEngagement[0]).toEqual({
     userId: 1,
     displayName: "User A",
+    email: "usera@example.com",
     predictionCount: 20,
     coveragePercent: 31, // Math.round(20/64 * 100) = 31
     totalPoints: 150,

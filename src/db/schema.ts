@@ -4,6 +4,7 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   clerkUserId: text("clerk_user_id").unique().notNull(),
   displayName: text("display_name").notNull(),
+  email: text("email"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
