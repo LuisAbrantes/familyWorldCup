@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getOrCreateLocalUserDetailed, isAdmin } from "@/lib/auth";
+import { getOrCreateLocalUserDetailed, isAdmin, isEmailAuthorizedCreator } from "@/lib/auth";
 
 export async function GET(req: Request) {
   try {
@@ -8,7 +8,8 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Unauthorized", details: error }, { status: 401 });
     }
     const isUserAdmin = await isAdmin(user.clerkUserId);
-    return NextResponse.json({ user, isAdmin: isUserAdmin });
+    const isCreator = isUserAdmin || (user.email ? await isEmailAuthorizedCreator(user.email) : false);
+    return NextResponse.json({ user, isAdmin: isUserAdmin, isCreator });
   } catch (error: any) {
     console.error("Auth sync error:", error);
     return NextResponse.json({ error: "Internal Server Error", details: error?.message || error }, { status: 500 });

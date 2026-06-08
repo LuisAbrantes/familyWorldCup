@@ -25,6 +25,8 @@ import {
   LogOut,
   Users,
   BarChart3,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 interface Match {
@@ -57,7 +59,7 @@ interface LeaderboardUser {
   totalPoints: number;
 }
 
-type TabKey = "inicio" | "jogos" | "ranking" | "palpites" | "admin";
+type TabKey = "inicio" | "rooms" | "jogos" | "ranking" | "palpites" | "admin";
 
 // Stage label translation
 function stageLabel(stage: string): string {
@@ -142,11 +144,30 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<TabKey>("inicio");
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isCreator, setIsCreator] = useState(false);
   const [matches, setMatches] = useState<Match[]>([]);
   const [predictions, setPredictions] = useState<Record<number, Prediction>>({});
   const [socialPredictions, setSocialPredictions] = useState<any>({});
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+
+  // Rooms states
+  const [roomsList, setRoomsList] = useState<any[]>([]);
+  const [activeRoomId, setActiveRoomId] = useState<number | null>(null);
+  const [noRooms, setNoRooms] = useState(false);
+  const [newRoomName, setNewRoomName] = useState("");
+  const [inviteCodeInput, setInviteCodeInput] = useState("");
+  const [creatingRoom, setCreatingRoom] = useState(false);
+  const [joiningRoom, setJoiningRoom] = useState(false);
+  const [roomActionFeedback, setRoomActionFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Super Admin creator email states
+  const [newAuthEmail, setNewAuthEmail] = useState("");
+  const [authEmailsList, setAuthEmailsList] = useState<any[]>([]);
+  const [loadingAuthEmails, setLoadingAuthEmails] = useState(false);
+  const [submittingAuthEmail, setSubmittingAuthEmail] = useState(false);
+  const [authEmailFeedback, setAuthEmailFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // Action states
   const [syncing, setSyncing] = useState(false);
@@ -162,7 +183,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Admin tabs & states
-  const [activeAdminTab, setActiveAdminTab] = useState<"sync" | "users" | "stats">("sync");
+  const [activeAdminTab, setActiveAdminTab] = useState<"sync" | "users" | "stats" | "authorizations">("sync");
   const [adminUsers, setAdminUsers] = useState<any[]>([]);
   const [adminStats, setAdminStats] = useState<any>(null);
   const [loadingAdminUsers, setLoadingAdminUsers] = useState(false);
@@ -195,6 +216,7 @@ export default function Home() {
       await supabase.auth.signOut();
       setUser(null);
       setIsAdmin(false);
+      setIsCreator(false);
       setMatches([]);
       setLeaderboard([]);
       setPredictions({});
@@ -207,7 +229,7 @@ export default function Home() {
     setSelectedProfileUser(null);
     setProfilePredictions([]);
     try {
-      const res = await fetchWithAuth(`/api/users/${userId}/predictions`);
+      const res = await fetchWithAuth(`/api/users/${userId}/predictions?roomId=${activeRoomId}`);
       if (res.ok) {
         const data = await res.json();
         setSelectedProfileUser(data.user);
@@ -250,6 +272,59 @@ export default function Home() {
     }
   }, [fetchWithAuth]);
 
+  const fetchAuthEmails = useCallback(async () => {
+    try {
+      setLoadingAuthEmails(true);
+      const res = await fetchWithAuth("/api/admin/authorizations");
+      if (res.ok) {
+        const data = await res.json();
+        setAuthEmailsList(data.creators || []);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar e-mails autorizados:", error);
+    } finally {
+      setLoadingAuthEmails(false);
+    }
+  }, [fetchWithAuth]);
+
+  const handleAuthorizeEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAuthEmail.trim()) return;
+    setSubmittingAuthEmail(true);
+    setAuthEmailFeedback(null);
+    try {
+      const res = await fetchWithAuth("/api/admin/authorizations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: newAuthEmail.trim(), roomsAllowed: 1 }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao autorizar e-mail.");
+      
+      setAuthEmailFeedback({ type: "success", text: `E-mail ${newAuthEmail} autorizado com sucesso!` });
+      setNewAuthEmail("");
+      await fetchAuthEmails();
+    } catch (err: any) {
+      setAuthEmailFeedback({ type: "error", text: err.message });
+    } finally {
+      setSubmittingAuthEmail(false);
+    }
+  };
+
+  const handleDeauthorizeEmail = async (email: string) => {
+    if (!confirm(`Tem certeza que deseja revogar a autorização de ${email}?`)) return;
+    try {
+      const res = await fetchWithAuth(`/api/admin/authorizations?email=${encodeURIComponent(email)}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        await fetchAuthEmails();
+      }
+    } catch (err) {
+      console.error("Erro ao revogar autorização:", err);
+    }
+  };
+
   const handleDeleteUser = async (id: number) => {
     if (!confirm("Tem certeza que deseja remover este participante? Todos os palpites dele serão excluídos permanentemente.")) {
       return;
@@ -264,7 +339,7 @@ export default function Home() {
       
       await fetchAdminUsers();
       
-      const leaderboardRes = await fetchWithAuth("/api/leaderboard");
+      const leaderboardRes = await fetchWithAuth(`/api/leaderboard?roomId=${activeRoomId}`);
       if (leaderboardRes.ok) {
         const leaderboardData = await leaderboardRes.json();
         setLeaderboard(leaderboardData.leaderboard);
@@ -282,9 +357,46 @@ export default function Home() {
         fetchAdminUsers();
       } else if (activeAdminTab === "stats") {
         fetchAdminStats();
+      } else if (activeAdminTab === "authorizations") {
+        fetchAuthEmails();
       }
     }
-  }, [activeTab, activeAdminTab, isAdmin, fetchAdminUsers, fetchAdminStats]);
+  }, [activeTab, activeAdminTab, isAdmin, fetchAdminUsers, fetchAdminStats, fetchAuthEmails]);
+
+  const loadRoomData = useCallback(async (roomId: number, token: string) => {
+    try {
+      const matchesRes = await fetch(`/api/matches?roomId=${roomId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!matchesRes.ok) throw new Error("Erro ao carregar os jogos do grupo.");
+      const matchesData = await matchesRes.json();
+      setMatches(matchesData.matches);
+
+      const predictionMap: Record<number, Prediction> = {};
+      const initialScores: Record<number, { home: number; away: number }> = {};
+
+      matchesData.predictions.forEach((pred: Prediction) => {
+        predictionMap[pred.matchId] = pred;
+        initialScores[pred.matchId] = {
+          home: pred.predictedHome,
+          away: pred.predictedAway,
+        };
+      });
+
+      setPredictions(predictionMap);
+      setPredictedScores(initialScores);
+      setSocialPredictions(matchesData.socialPredictions || {});
+
+      const leaderboardRes = await fetch(`/api/leaderboard?roomId=${roomId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!leaderboardRes.ok) throw new Error("Erro ao carregar a classificação do grupo.");
+      const leaderboardData = await leaderboardRes.json();
+      setLeaderboard(leaderboardData.leaderboard);
+    } catch (err) {
+      console.error("Erro ao carregar dados da sala:", err);
+    }
+  }, []);
 
   const loadData = useCallback(async () => {
     try {
@@ -307,15 +419,10 @@ export default function Home() {
       });
       
       if (!authRes.ok) {
-        try {
-          const errData = await authRes.json();
-          console.error("[Auth Sync Failure] Server returned non-OK status:", authRes.status, errData);
-        } catch {
-          console.error("[Auth Sync Failure] Server returned non-OK status:", authRes.status);
-        }
         await supabase.auth.signOut();
         setUser(null);
         setIsAdmin(false);
+        setIsCreator(false);
         setLoading(false);
         return;
       }
@@ -323,49 +430,137 @@ export default function Home() {
       const authData = await authRes.json();
       setUser(authData.user);
       setIsAdmin(authData.isAdmin || false);
+      setIsCreator(authData.isCreator || false);
 
-      const matchesRes = await fetch("/api/matches", {
+      // Fetch user rooms
+      const roomsRes = await fetch("/api/rooms", {
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (!matchesRes.ok) throw new Error("Erro ao carregar os jogos.");
-      const matchesData = await matchesRes.json();
-      setMatches(matchesData.matches);
+      if (!roomsRes.ok) throw new Error("Erro ao carregar grupos.");
+      const roomsData = await roomsRes.json();
+      setRoomsList(roomsData.rooms || []);
 
-      const predictionMap: Record<number, Prediction> = {};
-      const initialScores: Record<number, { home: number; away: number }> = {};
-
-      matchesData.predictions.forEach((pred: Prediction) => {
-        predictionMap[pred.matchId] = pred;
-        initialScores[pred.matchId] = {
-          home: pred.predictedHome,
-          away: pred.predictedAway,
-        };
-      });
-
-      setPredictions(predictionMap);
-      setPredictedScores(initialScores);
-      setSocialPredictions(matchesData.socialPredictions || {});
-
-      const leaderboardRes = await fetch("/api/leaderboard", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!leaderboardRes.ok) throw new Error("Erro ao carregar a classificação.");
-      const leaderboardData = await leaderboardRes.json();
-      setLeaderboard(leaderboardData.leaderboard);
+      if (roomsData.rooms && roomsData.rooms.length > 0) {
+        setNoRooms(false);
+        const savedRoomId = localStorage.getItem("activeRoomId");
+        let activeRoom = roomsData.rooms[0];
+        if (savedRoomId) {
+          const parsed = parseInt(savedRoomId, 10);
+          const found = roomsData.rooms.find((r: any) => r.id === parsed);
+          if (found) {
+            activeRoom = found;
+          }
+        }
+        setActiveRoomId(activeRoom.id);
+        localStorage.setItem("activeRoomId", activeRoom.id.toString());
+        await loadRoomData(activeRoom.id, token);
+      } else {
+        setNoRooms(true);
+        setActiveRoomId(null);
+        setMatches([]);
+        setPredictions({});
+        setLeaderboard([]);
+        setSocialPredictions({});
+        setActiveTab("rooms");
+      }
     } catch (error: any) {
       console.error("Erro no carregamento de dados:", error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadRoomData]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setIsResettingPassword(true);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const handleSwitchRoom = async (roomId: number) => {
+    setActiveRoomId(roomId);
+    localStorage.setItem("activeRoomId", roomId.toString());
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      setLoading(true);
+      await loadRoomData(roomId, session.access_token);
+      setLoading(false);
+    }
+  };
+
+  const handleCreateRoom = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRoomName.trim()) return;
+    setCreatingRoom(true);
+    setRoomActionFeedback(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const res = await fetch("/api/rooms", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: newRoomName }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao criar grupo.");
+      
+      setRoomActionFeedback({ type: "success", text: `Grupo "${data.room.name}" criado com sucesso! Código de convite: ${data.room.inviteCode}` });
+      setNewRoomName("");
+      
+      localStorage.setItem("activeRoomId", data.room.id.toString());
+      await loadData();
+    } catch (err: any) {
+      setRoomActionFeedback({ type: "error", text: err.message });
+    } finally {
+      setCreatingRoom(false);
+    }
+  };
+
+  const handleJoinRoom = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteCodeInput.trim()) return;
+    setJoiningRoom(true);
+    setRoomActionFeedback(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const res = await fetch("/api/rooms/join", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ inviteCode: inviteCodeInput }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao entrar no grupo.");
+      
+      setRoomActionFeedback({ type: "success", text: `Entrou no grupo "${data.room.name}" com sucesso!` });
+      setInviteCodeInput("");
+      
+      localStorage.setItem("activeRoomId", data.room.id.toString());
+      await loadData();
+    } catch (err: any) {
+      setRoomActionFeedback({ type: "error", text: err.message });
+    } finally {
+      setJoiningRoom(false);
+    }
+  };
+
   const handleSavePrediction = async (matchId: number) => {
-    const scores = predictedScores[matchId];
-    if (!scores) return;
+    const scores = predictedScores[matchId] || { home: 0, away: 0 };
 
     setSavingPrediction((prev) => ({ ...prev, [matchId]: true }));
     setPredictionFeedback((prev) => ({ ...prev, [matchId]: null as any }));
@@ -376,6 +571,7 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           matchId,
+          roomId: activeRoomId,
           predictedHome: scores.home,
           predictedAway: scores.away,
         }),
@@ -390,13 +586,13 @@ export default function Home() {
         [matchId]: { type: "success", text: "Salvo!" },
       }));
 
-      const matchesRes = await fetchWithAuth("/api/matches");
+      const matchesRes = await fetchWithAuth(`/api/matches?roomId=${activeRoomId}`);
       if (matchesRes.ok) {
         const matchesData = await matchesRes.json();
         setSocialPredictions(matchesData.socialPredictions || {});
       }
 
-      const leaderboardRes = await fetchWithAuth("/api/leaderboard");
+      const leaderboardRes = await fetchWithAuth(`/api/leaderboard?roomId=${activeRoomId}`);
       if (leaderboardRes.ok) {
         const leaderboardData = await leaderboardRes.json();
         setLeaderboard(leaderboardData.leaderboard);
@@ -485,6 +681,7 @@ export default function Home() {
   // Nav items
   const navItems: { key: TabKey; label: string; icon: React.ReactNode }[] = [
     { key: "inicio", label: "Início", icon: <Trophy className="w-4 h-4" /> },
+    { key: "rooms", label: "Grupos", icon: <Users className="w-4 h-4" /> },
     { key: "jogos", label: "Jogos", icon: <Calendar className="w-4 h-4" /> },
     { key: "ranking", label: "Ranking", icon: <Medal className="w-4 h-4" /> },
     { key: "palpites", label: "Palpites", icon: <Calendar className="w-4 h-4" /> },
@@ -498,6 +695,17 @@ export default function Home() {
           <p className="text-[#9ca3af] font-medium animate-pulse">Carregando dados da Copa do Mundo...</p>
         </div>
       </div>
+    );
+  }
+
+  if (isResettingPassword) {
+    return (
+      <ResetPasswordForm
+        onResetSuccess={async () => {
+          setIsResettingPassword(false);
+          await loadData();
+        }}
+      />
     );
   }
 
@@ -557,6 +765,19 @@ export default function Home() {
             <div className="flex items-center gap-3">
               {user && (
                 <>
+                  {roomsList.length > 0 && (
+                    <select
+                      value={activeRoomId || ""}
+                      onChange={(e) => handleSwitchRoom(parseInt(e.target.value, 10))}
+                      className="bg-[#1a3d24]/60 border border-[#2d5c38] rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#e8e8e8] focus:outline-none cursor-pointer hover:bg-[#1a3d24]/80 transition-all"
+                    >
+                      {roomsList.map((r) => (
+                        <option key={r.id} value={r.id} className="bg-[#0a1a0f]">
+                          {r.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                   <span className="hidden sm:block text-sm font-semibold text-[#e8e8e8]">
                     {user.displayName}
                   </span>
@@ -606,6 +827,190 @@ export default function Home() {
 
       {/* ─── Main Content ─── */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
+
+        {/* ---------------------------------------------- */}
+        {/* TAB: GRUPOS (SALAS)                            */}
+        {/* ---------------------------------------------- */}
+        {activeTab === "rooms" && (
+          <div className="animate-fadeIn flex flex-col gap-8">
+            <div className="text-center py-6">
+              <h1 className="text-3xl sm:text-4xl font-extrabold italic text-gold-gradient tracking-tight">
+                MEUS GRUPOS
+              </h1>
+              <p className="mt-2 text-[#9ca3af] text-sm sm:text-base max-w-xl mx-auto">
+                Crie seu próprio bolão com amigos da firma ou familiares, ou entre em um grupo existente.
+              </p>
+            </div>
+
+            {roomActionFeedback && (
+              <div className={`p-4 rounded-xl border flex items-center gap-3 ${
+                roomActionFeedback.type === "success" 
+                  ? "bg-green-950/20 border-green-900/50 text-green-300" 
+                  : "bg-red-950/20 border-red-900/50 text-red-300"
+              }`}>
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                <span className="text-sm font-semibold">{roomActionFeedback.text}</span>
+              </div>
+            )}
+
+            <div className="grid md:grid-cols-3 gap-8 items-start">
+              {/* List Groups */}
+              <div className="md:col-span-2 flex flex-col gap-4">
+                <h2 className="text-xl font-bold text-[#e8e8e8] flex items-center gap-2">
+                  <Users className="w-5 h-5 text-[#d4a017]" />
+                  Grupos que participo
+                </h2>
+                {roomsList.length === 0 ? (
+                  <div className="bg-[#0d2214] border border-[#1a3d24] rounded-2xl p-8 text-center text-[#9ca3af]">
+                    Você ainda não participa de nenhum grupo. Use as opções ao lado para criar ou entrar em um grupo!
+                  </div>
+                ) : (
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {roomsList.map((room) => {
+                      const isActive = activeRoomId === room.id;
+                      return (
+                        <div
+                          key={room.id}
+                          className={`p-6 rounded-2xl border transition-all flex flex-col gap-4 ${
+                            isActive
+                              ? "bg-[#1a3d24]/40 border-[#d4a017] shadow-lg shadow-[#d4a017]/5"
+                              : "bg-[#0d2214]/60 border-[#1a3d24] hover:bg-[#0d2214] hover:border-[#2d5c38]"
+                          }`}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="font-extrabold text-lg text-[#e8e8e8]">{room.name}</h3>
+                              <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[#2d5c38]/40 text-green-300">
+                                {room.role === "admin" ? "Dono / Admin" : "Participante"}
+                              </span>
+                            </div>
+                            <Trophy className={`w-5 h-5 ${isActive ? "text-[#d4a017]" : "text-[#9ca3af]"}`} />
+                          </div>
+
+                          <div className="text-sm text-[#9ca3af] flex flex-col gap-1.5">
+                            <div>
+                              Código de Convite:{" "}
+                              <span className="font-mono font-bold text-[#e8e8e8] bg-[#1a3d24]/60 px-2 py-0.5 rounded border border-[#2d5c38]">
+                                {room.inviteCode}
+                              </span>
+                            </div>
+                            <div className="text-xs text-[#9ca3af]">
+                              Participantes:{" "}
+                              <span className="font-bold text-[#e8e8e8]">
+                                {room.memberCount ?? 1} / {room.maxMembers ?? 15}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="mt-auto pt-2 flex gap-2">
+                            <button
+                              onClick={() => handleSwitchRoom(room.id)}
+                              className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
+                                isActive
+                                  ? "bg-[#d4a017] text-[#0a1a0f] hover:bg-[#b8860b]"
+                                  : "bg-[#1a3d24] text-[#e8e8e8] hover:bg-[#2d5c38] border border-[#2d5c38]"
+                              }`}
+                            >
+                              {isActive ? "Visualizando" : "Entrar"}
+                            </button>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(room.inviteCode);
+                                alert("Código de convite copiado!");
+                              }}
+                              className="p-2 bg-[#1a3d24]/40 border border-[#2d5c38] rounded-lg hover:bg-[#2d5c38]/40 text-[#9ca3af] hover:text-[#e8e8e8] transition-all cursor-pointer"
+                              title="Copiar Código"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Actions Sidebar */}
+              <div className="flex flex-col gap-6">
+                {/* Join Group */}
+                <div className="bg-[#0d2214]/60 border border-[#1a3d24] rounded-2xl p-6 flex flex-col gap-4">
+                  <h3 className="font-extrabold text-[#e8e8e8]">Entrar em um grupo</h3>
+                  <form onSubmit={handleJoinRoom} className="flex flex-col gap-3">
+                    <input
+                      type="text"
+                      placeholder="Código de 6 letras"
+                      value={inviteCodeInput}
+                      onChange={(e) => setInviteCodeInput(e.target.value.toUpperCase())}
+                      className="bg-[#0a1a0f] border border-[#2d5c38] rounded-lg px-3.5 py-2 text-sm text-[#e8e8e8] focus:outline-none focus:border-[#d4a017]"
+                    />
+                    <button
+                      type="submit"
+                      disabled={joiningRoom}
+                      className="w-full bg-[#1a3d24] text-[#e8e8e8] hover:bg-[#2d5c38] border border-[#2d5c38] py-2 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                    >
+                      {joiningRoom ? "Entrando..." : "Participar do Grupo"}
+                    </button>
+                  </form>
+                </div>
+
+                {/* Create Group */}
+                <div className="bg-[#0d2214]/60 border border-[#1a3d24] rounded-2xl p-6 flex flex-col gap-4">
+                  <h3 className="font-extrabold text-[#e8e8e8]">Criar novo grupo</h3>
+                  {isCreator ? (
+                    <>
+                      <div className="text-[11px] px-2.5 py-1.5 rounded bg-emerald-950/40 text-emerald-400 border border-emerald-900/30 font-semibold mb-1">
+                        ✓ Seu e-mail está autorizado a criar grupos!
+                      </div>
+                      <form onSubmit={handleCreateRoom} className="flex flex-col gap-3">
+                        <input
+                          type="text"
+                          placeholder="Nome do grupo (ex: Bolão da Firma)"
+                          value={newRoomName}
+                          onChange={(e) => setNewRoomName(e.target.value)}
+                          className="bg-[#0a1a0f] border border-[#1a3d24] rounded-lg px-3.5 py-2 text-sm text-[#e8e8e8] focus:outline-none focus:border-[#d4a017]"
+                        />
+                        <button
+                          type="submit"
+                          disabled={creatingRoom}
+                          className="w-full bg-[#d4a017] text-[#0a1a0f] hover:bg-[#b8860b] py-2 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                        >
+                          {creatingRoom ? "Criando..." : "Criar Grupo"}
+                        </button>
+                      </form>
+                    </>
+                  ) : (
+                    <div className="flex flex-col gap-3.5 text-center">
+                      <div className="p-3.5 bg-[#d4a017]/10 rounded-xl border border-[#d4a017]/25 flex flex-col gap-2">
+                        <span className="text-[#d4a017] font-black text-sm uppercase tracking-wider flex items-center justify-center gap-1">
+                          👑 BOLÃO EXCLUSIVO
+                        </span>
+                        <p className="text-xs text-[#e8e8e8] leading-relaxed font-semibold">
+                          Monte um bolão particular para a sua firma, amigos ou família com ranking automatizado e palpites em tempo real!
+                        </p>
+                      </div>
+                      <div className="text-xs text-[#9ca3af] leading-relaxed">
+                        <span className="text-[#e8e8e8] font-bold block mb-1">Preço:</span>
+                        R$ 15 por grupo (com limite de até 15 participantes - negociável direto com o administrador).
+                      </div>
+                      <div className="text-[11px] text-[#9ca3af] italic leading-normal">
+                        Fale comigo no WhatsApp para acertar o PIX e liberar a criação da sua sala agora mesmo!
+                      </div>
+                      <a
+                        href={`https://wa.me/5511999999999?text=Ol%C3%A1!%20Gostaria%20de%20criar%20uma%20sala%20no%20bol%C3%A3o.%20Meu%20e-mail%20cadastrado%20%C3%A9%3A%20${encodeURIComponent(user.email || "")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full border border-green-600/40 text-green-400 bg-green-950/20 hover:bg-green-950/40 py-2.5 rounded-lg text-xs font-bold text-center transition-all block shadow-lg shadow-green-950/20"
+                      >
+                        Chamar no WhatsApp & Liberar
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ---------------------------------------------- */}
         {/* TAB: INÍCIO                                    */}
@@ -730,12 +1135,12 @@ export default function Home() {
                         </div>
                       </div>
 
-                      {/* Social predictions (Palpites da Família) */}
+                      {/* Social predictions (Palpites do Grupo) */}
                       {socialPredictions[match.id] && (
                         <div className="mt-4 pt-4 border-t border-[#1a3d24]/50">
                           <details className="group">
                             <summary className="text-[11px] font-bold text-[#9ca3af] uppercase tracking-wider cursor-pointer list-none flex items-center justify-between select-none">
-                              <span>👥 Palpites da Família</span>
+                              <span>👥 Palpites do Grupo</span>
                               <ChevronRight className="w-3.5 h-3.5 transform transition-transform group-open:rotate-90 text-[#9ca3af]" />
                             </summary>
                             <div className="mt-3 flex flex-col gap-2 max-h-40 overflow-y-auto pr-1">
@@ -900,12 +1305,12 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Social predictions (Palpites da Família) */}
+                    {/* Social predictions (Palpites do Grupo) */}
                     {socialPredictions[match.id] && (
                       <div className="mt-4 pt-4 border-t border-[#1a3d24]/50">
                         <details className="group">
                           <summary className="text-[11px] font-bold text-[#9ca3af] uppercase tracking-wider cursor-pointer list-none flex items-center justify-between select-none">
-                            <span>👥 Palpites da Família</span>
+                            <span>👥 Palpites do Grupo</span>
                             <ChevronRight className="w-3.5 h-3.5 transform transition-transform group-open:rotate-90 text-[#9ca3af]" />
                           </summary>
                           <div className="mt-3 flex flex-col gap-2 max-h-40 overflow-y-auto pr-1">
@@ -1276,12 +1681,12 @@ export default function Home() {
                     </div>
                   </div>
 
-                    {/* Social predictions (Palpites da Família) */}
+                    {/* Social predictions (Palpites do Grupo) */}
                     {socialPredictions[match.id] && (
                       <div className="w-full mt-2 pt-4 border-t border-[#1a3d24]/50">
                         <details className="group">
                           <summary className="text-[11px] font-bold text-[#9ca3af] uppercase tracking-wider cursor-pointer list-none flex items-center justify-between select-none">
-                            <span>👥 Palpites da Família</span>
+                            <span>👥 Palpites do Grupo</span>
                             <ChevronRight className="w-3.5 h-3.5 transform transition-transform group-open:rotate-90 text-[#9ca3af]" />
                           </summary>
                           <div className="mt-3 flex flex-col gap-2 max-h-40 overflow-y-auto pr-1">
@@ -1337,7 +1742,7 @@ export default function Home() {
             <h2 className="text-2xl font-black text-[#e8e8e8] uppercase tracking-tight">Painel Admin</h2>
 
             {/* Sub-Navigation for Admin Panel */}
-            <div className="flex border-b border-[#1a3d24] mb-2">
+            <div className="flex border-b border-[#1a3d24] mb-2 flex-wrap">
               <button
                 onClick={() => setActiveAdminTab("sync")}
                 className={`px-4 py-2 font-bold text-sm transition-all border-b-2 cursor-pointer flex items-center gap-2 ${
@@ -1370,6 +1775,17 @@ export default function Home() {
               >
                 <BarChart3 className="w-4 h-4" />
                 Estatísticas
+              </button>
+              <button
+                onClick={() => setActiveAdminTab("authorizations")}
+                className={`px-4 py-2 font-bold text-sm transition-all border-b-2 cursor-pointer flex items-center gap-2 ${
+                  activeAdminTab === "authorizations"
+                    ? "border-[#d4a017] text-[#d4a017]"
+                    : "border-transparent text-[#9ca3af] hover:text-[#e8e8e8]"
+                }`}
+              >
+                <Lock className="w-4 h-4" />
+                Autorizações (Salas)
               </button>
             </div>
 
@@ -1696,6 +2112,101 @@ export default function Home() {
                 )}
               </div>
             )}
+
+            {/* Sub-tab: Authorizations (Autorizações) */}
+            {activeAdminTab === "authorizations" && (
+              <div className="flex flex-col gap-6">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-bold text-[#e8e8e8] flex items-center gap-2">
+                    <Lock className="w-5 h-5 text-[#d4a017]" />
+                    E-mails Autorizados a Criar Salas
+                  </h3>
+                  <button
+                    onClick={fetchAuthEmails}
+                    className="text-xs font-bold text-[#d4a017] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <RefreshCw className="w-3 h-3" /> Atualizar Lista
+                  </button>
+                </div>
+
+                <div className="card-glass rounded-2xl p-6 border border-[#1a3d24]">
+                  <h4 className="text-sm font-bold text-[#e8e8e8] mb-3">Autorizar Novo E-mail</h4>
+                  <form onSubmit={handleAuthorizeEmail} className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="email"
+                      placeholder="email@exemplo.com"
+                      value={newAuthEmail}
+                      onChange={(e) => setNewAuthEmail(e.target.value)}
+                      required
+                      className="flex-1 bg-[#0a1a0f] border border-[#1a3d24] rounded-lg py-2 px-3 text-sm text-[#e8e8e8] placeholder:text-[#6b7280] focus:outline-none focus:border-[#d4a017]"
+                    />
+                    <button
+                      type="submit"
+                      disabled={submittingAuthEmail}
+                      className="bg-[#d4a017] hover:bg-[#b8860b] text-[#0a1a0f] py-2 px-4 rounded-lg text-xs font-bold transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {submittingAuthEmail ? "Autorizando..." : "Autorizar"}
+                    </button>
+                  </form>
+                  {authEmailFeedback && (
+                    <div
+                      className={`mt-3 p-3 rounded-lg border text-sm flex items-center gap-2 ${
+                        authEmailFeedback.type === "success"
+                          ? "bg-emerald-950/20 border-emerald-900/50 text-emerald-400"
+                          : "bg-red-950/20 border-red-900/50 text-red-400"
+                      }`}
+                    >
+                      {authEmailFeedback.type === "success" ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                      <span>{authEmailFeedback.text}</span>
+                    </div>
+                  )}
+                </div>
+
+                {loadingAuthEmails ? (
+                  <div className="flex justify-center py-8">
+                    <RefreshCw className="w-6 h-6 animate-spin text-[#d4a017]" />
+                  </div>
+                ) : authEmailsList.length === 0 ? (
+                  <p className="text-sm text-[#9ca3af] py-4 text-center">Nenhum e-mail autorizado ainda.</p>
+                ) : (
+                  <div className="overflow-x-auto rounded-xl border border-[#1a3d24]">
+                    <table className="w-full text-left border-collapse text-sm">
+                      <thead>
+                        <tr className="bg-[#0f2a18] text-[#9ca3af] font-bold border-b border-[#1a3d24]">
+                          <th className="p-4">E-mail</th>
+                          <th className="p-4">Criado Em</th>
+                          <th className="p-4 text-right">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#1a3d24]/50">
+                        {authEmailsList.map((c) => (
+                          <tr key={c.id} className="hover:bg-[#0d2214]/40 transition-colors">
+                            <td className="p-4 font-bold text-[#e8e8e8]">{c.email}</td>
+                            <td className="p-4 text-[#9ca3af]">
+                              {new Date(c.createdAt).toLocaleDateString("pt-BR", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </td>
+                            <td className="p-4 text-right">
+                              <button
+                                onClick={() => handleDeauthorizeEmail(c.email)}
+                                className="px-3 py-1.5 rounded-lg bg-red-950/40 hover:bg-red-900/40 text-red-400 border border-red-900/50 text-xs font-bold transition-all cursor-pointer"
+                              >
+                                Revogar
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
         {/* MODAL: PERFIL DO USUÁRIO */}
@@ -1726,7 +2237,7 @@ export default function Home() {
                 {loadingProfile ? (
                   <div className="flex flex-col items-center justify-center py-20 gap-3">
                     <RefreshCw className="w-8 h-8 animate-spin text-[#d4a017]" />
-                    <span className="text-sm font-semibold text-[#9ca3af]">Buscando palpites da família...</span>
+                    <span className="text-sm font-semibold text-[#9ca3af]">Buscando palpites do grupo...</span>
                   </div>
                 ) : !profilePredictions || profilePredictions.length === 0 ? (
                   <p className="text-center py-12 text-sm text-[#9ca3af] italic">Nenhum palpite registrado por este participante.</p>
@@ -1821,7 +2332,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="py-6 px-4 border-t border-[#1a3d24] text-center text-xs text-[#6b7280] font-semibold mt-auto">
-        Desenvolvido com carinho para o Bolão da Família Copa 2026.
+        Desenvolvido com carinho para o Bolão da Copa 2026.
       </footer>
     </div>
   );
@@ -1829,10 +2340,12 @@ export default function Home() {
 
 function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
   const [isLogin, setIsLogin] = useState(true);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1841,7 +2354,16 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
     setMessage(null);
 
     try {
-      if (isLogin) {
+      if (isForgotPassword) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+          redirectTo: `${window.location.origin}/`,
+        });
+        if (error) throw error;
+        setMessage({
+          type: "success",
+          text: "E-mail de recuperação enviado! Verifique sua caixa de entrada.",
+        });
+      } else if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -1881,10 +2403,14 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
             <Trophy className="w-8 h-8" />
           </div>
           <h1 className="text-2xl font-extrabold text-[#d4a017] tracking-tight text-center">
-            BOLÃO DA FAMÍLIA COPA 2026
+            {isForgotPassword 
+              ? "RECUPERAR SENHA" 
+              : "BOLÃO DA COPA 2026"}
           </h1>
           <p className="text-sm text-[#9ca3af] text-center">
-            {isLogin
+            {isForgotPassword
+              ? "Digite seu e-mail para receber um link de redefinição de senha"
+              : isLogin
               ? "Entre para salvar seus palpites e ver a classificação"
               : "Crie sua conta para participar do bolão"}
           </p>
@@ -1904,7 +2430,7 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {!isLogin && (
+          {!isForgotPassword && !isLogin && (
             <div>
               <label className="block text-xs font-semibold text-[#9ca3af] mb-1.5 uppercase tracking-wider">
                 Seu Nome (como aparecerá no ranking)
@@ -1934,18 +2460,200 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
             />
           </div>
 
+          {!isForgotPassword && (
+            <div>
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="block text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">
+                  Senha
+                </label>
+                {isLogin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsForgotPassword(true);
+                      setMessage(null);
+                    }}
+                    className="text-xs text-[#d4a017] hover:underline cursor-pointer"
+                  >
+                    Esqueceu sua senha?
+                  </button>
+                )}
+              </div>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className="w-full bg-[#08150c] border border-[#1a3d24] focus:border-[#d4a017] focus:ring-1 focus:ring-[#d4a017] rounded-lg pl-4 pr-10 py-2.5 text-sm outline-none text-[#e8e8e8] placeholder-[#4b5563] transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[#d4a017] transition-all cursor-pointer"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-[#d4a017] hover:bg-[#b8860b] text-[#0a1a0f] disabled:bg-gray-600 disabled:text-gray-300 font-bold py-3 px-4 rounded-lg text-sm transition-all duration-200 cursor-pointer shadow-lg shadow-[#d4a017]/10"
+          >
+            {loading 
+              ? "Processando..." 
+              : isForgotPassword 
+              ? "Enviar E-mail de Recuperação" 
+              : isLogin 
+              ? "Entrar" 
+              : "Criar Conta"}
+          </button>
+        </form>
+
+        <div className="mt-6 pt-6 border-t border-[#1a3d24] text-center">
+          {isForgotPassword ? (
+            <button
+              type="button"
+              onClick={() => {
+                setIsForgotPassword(false);
+                setMessage(null);
+              }}
+              className="text-sm text-[#9ca3af] hover:text-[#d4a017] transition-all cursor-pointer font-medium"
+            >
+              Voltar para o login
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setIsLogin(!isLogin);
+                setMessage(null);
+              }}
+              className="text-sm text-[#9ca3af] hover:text-[#d4a017] transition-all cursor-pointer font-medium"
+            >
+              {isLogin ? "Não tem conta? Crie uma aqui" : "Já tem conta? Faça login"}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ResetPasswordForm({ onResetSuccess }: { onResetSuccess: () => void }) {
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 6) {
+      setMessage({ type: "error", text: "A senha deve ter pelo menos 6 caracteres." });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setMessage({ type: "error", text: "As senhas não coincidem." });
+      return;
+    }
+
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+
+      setMessage({ type: "success", text: "Senha atualizada com sucesso!" });
+      setTimeout(() => {
+        onResetSuccess();
+      }, 2000);
+    } catch (error: any) {
+      setMessage({ type: "error", text: error.message || "Erro ao atualizar a senha." });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-[#0a1a0f] text-[#e8e8e8] px-4">
+      <div className="w-full max-w-md bg-[#0d2214] border border-[#1a3d24] rounded-2xl p-6 sm:p-8 shadow-2xl">
+        <div className="flex flex-col items-center gap-3 mb-6">
+          <div className="p-3 bg-[#d4a017]/10 rounded-full border border-[#d4a017]/25 text-[#d4a017]">
+            <Trophy className="w-8 h-8" />
+          </div>
+          <h1 className="text-2xl font-extrabold text-[#d4a017] tracking-tight text-center">
+            REDEFINIR SENHA
+          </h1>
+          <p className="text-sm text-[#9ca3af] text-center">
+            Digite sua nova senha para acessar o bolão
+          </p>
+        </div>
+
+        {message && (
+          <div
+            className={`p-3 rounded-lg border text-sm mb-4 flex items-center gap-2 ${
+              message.type === "success"
+                ? "bg-[#1a3d24]/20 border-[#1a3d24] text-green-400"
+                : "bg-red-950/20 border-red-900/40 text-red-400"
+            }`}
+          >
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{message.text}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-[#9ca3af] mb-1.5 uppercase tracking-wider">
-              Senha
+              Nova Senha
             </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              className="w-full bg-[#08150c] border border-[#1a3d24] focus:border-[#d4a017] focus:ring-1 focus:ring-[#d4a017] rounded-lg px-4 py-2.5 text-sm outline-none text-[#e8e8e8] placeholder-[#4b5563] transition-all"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+                required
+                className="w-full bg-[#08150c] border border-[#1a3d24] focus:border-[#d4a017] focus:ring-1 focus:ring-[#d4a017] rounded-lg pl-4 pr-10 py-2.5 text-sm outline-none text-[#e8e8e8] placeholder-[#4b5563] transition-all"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[#d4a017] transition-all cursor-pointer"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-[#9ca3af] mb-1.5 uppercase tracking-wider">
+              Confirmar Nova Senha
+            </label>
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirme a senha"
+                required
+                className="w-full bg-[#08150c] border border-[#1a3d24] focus:border-[#d4a017] focus:ring-1 focus:ring-[#d4a017] rounded-lg pl-4 pr-10 py-2.5 text-sm outline-none text-[#e8e8e8] placeholder-[#4b5563] transition-all"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[#d4a017] transition-all cursor-pointer"
+              >
+                {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
 
           <button
@@ -1953,22 +2661,9 @@ function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
             disabled={loading}
             className="w-full bg-[#d4a017] hover:bg-[#b8860b] text-[#0a1a0f] disabled:bg-gray-600 disabled:text-gray-300 font-bold py-3 px-4 rounded-lg text-sm transition-all duration-200 cursor-pointer shadow-lg shadow-[#d4a017]/10"
           >
-            {loading ? "Processando..." : isLogin ? "Entrar" : "Criar Conta"}
+            {loading ? "Salvando..." : "Salvar Nova Senha"}
           </button>
         </form>
-
-        <div className="mt-6 pt-6 border-t border-[#1a3d24] text-center">
-          <button
-            type="button"
-            onClick={() => {
-              setIsLogin(!isLogin);
-              setMessage(null);
-            }}
-            className="text-sm text-[#9ca3af] hover:text-[#d4a017] transition-all cursor-pointer font-medium"
-          >
-            {isLogin ? "Não tem conta? Crie uma aqui" : "Já tem conta? Faça login"}
-          </button>
-        </div>
       </div>
     </div>
   );

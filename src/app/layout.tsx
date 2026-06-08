@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Bolão da Família - Copa do Mundo 2026",
-  description: "Faça seus palpites da Copa do Mundo de 2026 e dispute com a família!",
+  title: "Bolão da Copa - Copa do Mundo 2026",
+  description: "Faça seus palpites da Copa do Mundo de 2026 e dispute com seus grupos!",
 };
 
 export default function RootLayout({

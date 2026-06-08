@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { db } from "@/db";
-import { users } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { users, authorizedCreators, roomMembers } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 
 let memoizedAdminIds: Set<string> | null = null;
 
@@ -117,3 +117,35 @@ export async function isAdmin(clerkUserId: string | null): Promise<boolean> {
   }
   return memoizedAdminIds.has(clerkUserId);
 }
+
+export async function isRoomAdmin(userId: number | null, roomId: number | null): Promise<boolean> {
+  if (!userId || !roomId) return false;
+  const member = await db.query.roomMembers.findFirst({
+    where: and(
+      eq(roomMembers.roomId, roomId),
+      eq(roomMembers.userId, userId),
+      eq(roomMembers.role, "admin")
+    )
+  });
+  return !!member;
+}
+
+export async function isRoomMember(userId: number | null, roomId: number | null): Promise<boolean> {
+  if (!userId || !roomId) return false;
+  const member = await db.query.roomMembers.findFirst({
+    where: and(
+      eq(roomMembers.roomId, roomId),
+      eq(roomMembers.userId, userId)
+    )
+  });
+  return !!member;
+}
+
+export async function isEmailAuthorizedCreator(email: string | null): Promise<boolean> {
+  if (!email) return false;
+  const auth = await db.query.authorizedCreators.findFirst({
+    where: eq(authorizedCreators.email, email.toLowerCase().trim())
+  });
+  return !!auth && auth.roomsAllowed > 0;
+}
+
