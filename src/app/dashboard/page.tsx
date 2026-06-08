@@ -166,6 +166,11 @@ export default function Home() {
   const [joiningRoom, setJoiningRoom] = useState(false);
   const [roomActionFeedback, setRoomActionFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  // Group Admin states
+  const [editingRoomName, setEditingRoomName] = useState("");
+  const [roomAdminFeedback, setRoomAdminFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [adminActionLoading, setAdminActionLoading] = useState(false);
+
   // Tutorial states
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
@@ -568,6 +573,15 @@ export default function Home() {
   }, [loadData]);
 
   useEffect(() => {
+    if (activeRoomId && roomsList.length > 0) {
+      const activeRoom = roomsList.find((r) => r.id === activeRoomId);
+      if (activeRoom) {
+        setEditingRoomName(activeRoom.name);
+      }
+    }
+  }, [activeRoomId, roomsList]);
+
+  useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY") {
         setIsResettingPassword(true);
@@ -649,6 +663,68 @@ export default function Home() {
       setRoomActionFeedback({ type: "error", text: err.message });
     } finally {
       setJoiningRoom(false);
+    }
+  };
+
+  const handleUpdateRoomName = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeRoomId || !editingRoomName.trim() || editingRoomName.trim().length < 3) return;
+    setAdminActionLoading(true);
+    setRoomAdminFeedback(null);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const res = await fetch("/api/rooms", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ roomId: activeRoomId, name: editingRoomName.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao atualizar nome do grupo.");
+
+      setRoomAdminFeedback({ type: "success", text: "Nome do grupo atualizado com sucesso!" });
+      
+      // Refresh room list
+      await loadData();
+    } catch (err: any) {
+      setRoomAdminFeedback({ type: "error", text: err.message });
+    } finally {
+      setAdminActionLoading(false);
+    }
+  };
+
+  const handleRemoveRoomMember = async (userId: number, displayName: string) => {
+    if (!activeRoomId) return;
+    if (!confirm(`Tem certeza que deseja remover ${displayName} do grupo? Todos os palpites dele serão excluídos permanentemente.`)) {
+      return;
+    }
+    setAdminActionLoading(true);
+    setRoomAdminFeedback(null);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const res = await fetch(`/api/rooms?roomId=${activeRoomId}&userId=${userId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao remover participante.");
+
+      setRoomAdminFeedback({ type: "success", text: `${displayName} foi removido com sucesso!` });
+      
+      // Refresh room list & leaderboard
+      await loadData();
+    } catch (err: any) {
+      setRoomAdminFeedback({ type: "error", text: err.message });
+    } finally {
+      setAdminActionLoading(false);
     }
   };
 
@@ -770,6 +846,9 @@ export default function Home() {
   const upcomingMatches = matches.filter((m) => m.status === "SCHEDULED" || m.status === "TIMED").length;
   const userRank = leaderboard.findIndex((u) => u.isCurrentUser) + 1;
   const userTotalPoints = leaderboard.find((u) => u.isCurrentUser)?.totalPoints || 0;
+
+  const activeRoom = roomsList.find((r) => r.id === activeRoomId);
+  const isRoomAdmin = activeRoom && (activeRoom.role === "admin" || isAdmin);
 
   // Nav items
   const navItems: { key: TabKey; label: string; icon: React.ReactNode }[] = [
@@ -1169,6 +1248,94 @@ export default function Home() {
                     </div>
                   )}
                 </div>
+
+                {/* Painel do Administrador do Grupo */}
+                {activeRoom && isRoomAdmin && (
+                  <div className="bg-[#0d2214]/60 border border-[#d4a017]/50 rounded-2xl p-6 flex flex-col gap-4 shadow-lg shadow-[#d4a017]/5 animate-fadeIn">
+                    <h3 className="font-extrabold text-[#d4a017] flex items-center gap-2 text-sm uppercase tracking-wider">
+                      <Settings className="w-4.5 h-4.5 text-[#d4a017]" />
+                      Painel do Administrador
+                    </h3>
+                    
+                    {roomAdminFeedback && (
+                      <div className={`p-3 rounded-lg border text-xs font-semibold ${
+                        roomAdminFeedback.type === "success" 
+                          ? "bg-green-950/20 border-green-900/50 text-green-300" 
+                          : "bg-red-950/20 border-red-900/50 text-red-300"
+                      }`}>
+                        {roomAdminFeedback.text}
+                      </div>
+                    )}
+
+                    {/* Editar Nome do Grupo */}
+                    <form onSubmit={handleUpdateRoomName} className="flex flex-col gap-2">
+                      <label className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-wider">
+                        Nome do Grupo
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={editingRoomName}
+                          onChange={(e) => setEditingRoomName(e.target.value)}
+                          placeholder="Nome do grupo"
+                          className="flex-1 bg-[#0a1a0f] border border-[#2d5c38] rounded-lg px-3 py-1.5 text-xs text-[#e8e8e8] focus:outline-none focus:border-[#d4a017]"
+                        />
+                        <button
+                          type="submit"
+                          disabled={adminActionLoading || editingRoomName.trim() === activeRoom.name || editingRoomName.trim().length < 3}
+                          className="bg-[#d4a017] text-[#0a1a0f] hover:bg-[#b8860b] px-3.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                        >
+                          Salvar
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* Gerenciar Membros */}
+                    <div className="flex flex-col gap-2 mt-1">
+                      <span className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-wider">
+                        Participantes ({leaderboard.length})
+                      </span>
+                      <div className="flex flex-col gap-1.5 max-h-52 overflow-y-auto pr-1">
+                        {leaderboard.map((member) => {
+                          const isOwner = member.id === activeRoom.creatorUserId;
+                          const isSelf = member.isCurrentUser;
+                          const canRemove = !isOwner && !isSelf;
+
+                          return (
+                            <div
+                              key={member.id}
+                              className="flex items-center justify-between py-1.5 px-2.5 rounded bg-[#0a1a0f]/40 border border-[#1a3d24]/30 text-xs"
+                            >
+                              <div className="flex flex-col">
+                                <span className="font-semibold text-[#e8e8e8] truncate max-w-[120px]">
+                                  {member.displayName}
+                                </span>
+                                <span className="text-[9px] text-[#9ca3af]">
+                                  {isOwner ? "Proprietário 👑" : "Participante"}
+                                </span>
+                              </div>
+
+                              {canRemove ? (
+                                <button
+                                  type="button"
+                                  disabled={adminActionLoading}
+                                  onClick={() => handleRemoveRoomMember(member.id, member.displayName)}
+                                  className="text-[9px] font-bold text-red-400 bg-red-950/20 border border-red-900/30 px-2 py-0.5 rounded hover:bg-red-900/40 transition-all cursor-pointer"
+                                >
+                                  Remover
+                                </button>
+                              ) : isSelf ? (
+                                <span className="text-[9px] font-bold text-[#d4a017] bg-[#d4a017]/10 px-2 py-0.5 rounded border border-[#d4a017]/20">
+                                  Você
+                                </span>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
