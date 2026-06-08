@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { predictions, matches } from "@/db/schema";
-import { getOrCreateLocalUser } from "@/lib/auth";
-import { eq } from "drizzle-orm";
+import { getOrCreateLocalUser, isRoomMember } from "@/lib/auth";
+import { eq, and } from "drizzle-orm";
 
 export async function POST(req: Request) {
   try {
@@ -11,13 +11,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { matchId, predictedHome, predictedAway } = await req.json();
+    const { matchId, roomId, predictedHome, predictedAway } = await req.json();
+
+    if (!roomId) {
+      return NextResponse.json({ error: "ID do grupo é obrigatório." }, { status: 400 });
+    }
 
     if (
       typeof predictedHome !== "number" || predictedHome < 0 ||
       typeof predictedAway !== "number" || predictedAway < 0
     ) {
       return NextResponse.json({ error: "Os placares devem ser inteiros positivos." }, { status: 400 });
+    }
+
+    // Verify room membership
+    const isMember = await isRoomMember(localUser.id, roomId);
+    if (!isMember) {
+      return NextResponse.json({ error: "Você não faz parte deste grupo." }, { status: 403 });
     }
 
     // Verify Match status and Date lock
@@ -38,16 +48,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Palpite travado. O jogo já começou ou está finalizado." }, { status: 403 });
     }
 
-    // Upsert prediction using conflict handling
+    // Upsert prediction using conflict handling (target userId, matchId, roomId)
     const result = await db.insert(predictions)
       .values({
         userId: localUser.id,
         matchId,
+        roomId,
         predictedHome,
         predictedAway,
       })
       .onConflictDoUpdate({
-        target: [predictions.userId, predictions.matchId],
+        target: [predictions.userId, predictions.matchId, predictions.roomId],
         set: {
           predictedHome,
           predictedAway,

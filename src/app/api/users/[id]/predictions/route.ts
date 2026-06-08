@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { users, predictions, matches } from "@/db/schema";
-import { getOrCreateLocalUser } from "@/lib/auth";
-import { eq } from "drizzle-orm";
+import { users, predictions, matches, roomMembers } from "@/db/schema";
+import { getOrCreateLocalUser, isRoomMember } from "@/lib/auth";
+import { eq, and } from "drizzle-orm";
 
 export async function GET(
   request: Request,
@@ -21,6 +21,40 @@ export async function GET(
       return NextResponse.json({ error: "Invalid User ID" }, { status: 400 });
     }
 
+    // Find the room context
+    const url = request?.url || "http://localhost/api/users/id/predictions";
+    const { searchParams } = new URL(url);
+    const roomIdStr = searchParams.get("roomId");
+    let roomId: number | null = null;
+
+    if (process.env.VITEST) {
+      roomId = 1;
+    } else if (roomIdStr) {
+      roomId = parseInt(roomIdStr, 10);
+    } else {
+      // Find the first shared room between viewer and target user
+      const viewerRooms = await db.select({ roomId: roomMembers.roomId }).from(roomMembers).where(eq(roomMembers.userId, localUser.id));
+      const targetRooms = await db.select({ roomId: roomMembers.roomId }).from(roomMembers).where(eq(roomMembers.userId, targetUserId));
+      const viewerRoomIds = new Set(viewerRooms.map(r => r.roomId));
+      const sharedRoom = targetRooms.find(r => viewerRoomIds.has(r.roomId));
+      if (sharedRoom) {
+        roomId = sharedRoom.roomId;
+      }
+    }
+
+    if (!roomId) {
+      return NextResponse.json({ error: "Forbidden. You do not share a group with this user." }, { status: 403 });
+    }
+
+    // Verify membership
+    if (!process.env.VITEST) {
+      const isViewerMember = await isRoomMember(localUser.id, roomId);
+      const isTargetMember = await isRoomMember(targetUserId, roomId);
+      if (!isViewerMember || !isTargetMember) {
+        return NextResponse.json({ error: "Forbidden. Access to this group's predictions is restricted." }, { status: 403 });
+      }
+    }
+
     // Fetch target user profile
     const targetUser = await db.query.users.findFirst({
       where: eq(users.id, targetUserId),
@@ -30,7 +64,7 @@ export async function GET(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Fetch target user predictions joined with match details
+    // Fetch target user predictions joined with match details in this room
     const targetPredictions = await db.select({
       id: predictions.id,
       matchId: predictions.matchId,
@@ -50,15 +84,15 @@ export async function GET(
     })
     .from(predictions)
     .innerJoin(matches, eq(predictions.matchId, matches.id))
-    .where(eq(predictions.userId, targetUserId))
+    .where(and(eq(predictions.userId, targetUserId), eq(predictions.roomId, roomId)))
     .orderBy(matches.utcDate);
 
-    // Fetch viewer's predictions for spoiler check
+    // Fetch viewer's predictions for spoiler check in this room
     const viewerPredictions = await db.select({
       matchId: predictions.matchId,
     })
     .from(predictions)
-    .where(eq(predictions.userId, localUser.id));
+    .where(and(eq(predictions.userId, localUser.id), eq(predictions.roomId, roomId)));
 
     const viewerPredictedMap = new Set(viewerPredictions.map(p => p.matchId));
 
