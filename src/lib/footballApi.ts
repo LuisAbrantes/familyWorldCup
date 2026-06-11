@@ -31,17 +31,26 @@ export async function fetchMatchesFromApi(): Promise<{ matches: ApiMatch[] }> {
   // Force WC 2026 competition
   const url = `${BASE_URL}/competitions/WC/matches?season=2026`;
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 seconds timeout
+
   let response: Response;
   try {
     response = await fetch(url, {
       headers: {
         "X-Auth-Token": apiKey,
       },
+      signal: controller.signal,
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error("[Football API Client] Fetch error details:", err);
+    if (err.name === "AbortError") {
+      throw new Error("Timeout ao conectar com a API de futebol (limite de 3 segundos excedido)");
+    }
     const message = err instanceof Error ? err.message : "Unknown network error";
     throw new Error(`Failed to fetch match data: ${message}`);
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   // Extract rate-limit headers for auditing
