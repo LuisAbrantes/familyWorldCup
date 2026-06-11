@@ -34,7 +34,7 @@ Acompanhar um bolão na mão (atualizar placares, conferir acertos, somar pontos
 
 - Frontend e backend: Next.js (App Router) com TypeScript. Um app só, API routes como funções serverless.
 - UI: shadcn/ui + Tailwind. Textos da interface em português do Brasil.
-- Autenticação: Clerk (já em uso, plano grátis, independente de host).
+- Autenticação: Supabase Auth (plano grátis, independente de host).
 - Banco de dados: PostgreSQL grátis no Neon (Supabase Postgres funciona de forma idêntica como alternativa). ORM: Drizzle.
 - Dados de futebol: API da football-data.org, plano grátis (competição WC).
 - Testes: Vitest (unidade, foco no motor de pontuação) e Playwright (ponta a ponta).
@@ -50,7 +50,7 @@ Acompanhar um bolão na mão (atualizar placares, conferir acertos, somar pontos
 
 ## 8. Escopo do MVP (obrigatório antes de 11 de junho)
 
-1. Login via Clerk.
+1. Login via Supabase Auth.
 2. Listagem de todos os jogos da Copa, agrupados por fase e grupo, com data/hora em horário de Brasília, status e placar.
 3. Registro e edição de palpite de placar por jogo, com trava no início do jogo.
 4. Motor de pontuação que calcula pontos quando o jogo está FINISHED.
@@ -67,7 +67,7 @@ Acompanhar um bolão na mão (atualizar placares, conferir acertos, somar pontos
 
 ## 10. Ordem de construção sugerida para o Claude Code
 
-1. Scaffold do Next.js + Tailwind + shadcn/ui + Clerk + Drizzle + Neon. Migrations das tabelas.
+1. Scaffold do Next.js + Tailwind + shadcn/ui + Supabase Auth + Drizzle + Neon. Migrations das tabelas.
 2. Camada de integração com a football-data.org (cliente, cache, throttling) e o endpoint de sincronização lazy.
 3. Motor de pontuação isolado e testável (Vitest), com a tabela-verdade do spec de arquitetura.
 4. Telas: lista de jogos, formulário de palpite, ranking.
@@ -79,4 +79,4 @@ Acompanhar um bolão na mão (atualizar placares, conferir acertos, somar pontos
 
 - **Regra de mata-mata**: jogos eliminatórios podem ser decididos na prorrogação ou pênaltis. A regra do bolão precisa ser combinada com a família (ver spec de pontuação). Decisão padrão proposta: pontuar pelo placar de `score.fullTime` retornado pela API.
 - **Atraso de placar**: o plano grátis não entrega resultado ao vivo instantâneo. Aceitável para o caso de uso.
-- **Limite de domínios do Clerk**: ao migrar de host, o novo domínio da Vercel precisa ser adicionado na lista de origens permitidas no painel do Clerk.
+- **Configuração do Supabase Auth**: ao migrar de host, o novo domínio da Vercel precisa ser adicionado nas configurações de redirect URLs do painel do Supabase.

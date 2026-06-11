@@ -72,7 +72,7 @@ test("syncMatches calls fetch if latest match lastSyncedAt is past TTL", async (
   expect(fetchMatchesFromApi).toHaveBeenCalled();
 });
 
-test("syncMatches syncs matches, updates match records, and calculates points for finished match predictions", async () => {
+test("syncMatches syncs matches, updates match records, and calculates points for finished match predictions (double points for Brazil)", async () => {
   const mockFindFirst = vi.mocked(db.query.matches.findFirst);
   // Database is empty (latestMatch = undefined)
   mockFindFirst.mockResolvedValue(undefined as any);
@@ -125,6 +125,58 @@ test("syncMatches syncs matches, updates match records, and calculates points fo
   // Verify that it selected predictions
   expect(mockSelect).toHaveBeenCalled();
   
+  // Verify update was called for predictions (exact score * 2 = 20 points for Brazil)
+  expect(db.update).toHaveBeenCalled();
+  expect(mockSet).toHaveBeenCalledWith(
+    expect.objectContaining({
+      pointsAwarded: 20,
+    })
+  );
+});
+
+test("syncMatches calculates standard points (no multiplier) for non-Brazil matches", async () => {
+  const mockFindFirst = vi.mocked(db.query.matches.findFirst);
+  mockFindFirst.mockResolvedValue(undefined as any);
+
+  const mockFetch = vi.mocked(fetchMatchesFromApi);
+  mockFetch.mockResolvedValue({
+    matches: [
+      {
+        id: 103,
+        stage: "GROUP_STAGE",
+        group: "GROUP_A",
+        utcDate: "2026-06-08T18:00:00Z",
+        status: "FINISHED",
+        homeTeam: { name: "Argentina", crest: "argentina.png" },
+        awayTeam: { name: "Croatia", crest: "croatia.png" },
+        score: {
+          fullTime: { home: 3, away: 1 }
+        }
+      }
+    ]
+  } as any);
+
+  const mockWhere = vi.fn().mockReturnValue([
+    {
+      id: 2,
+      userId: 42,
+      matchId: 103,
+      predictedHome: 3,
+      predictedAway: 1,
+      pointsAwarded: null,
+    }
+  ]);
+  const mockFrom = vi.fn(() => ({ where: mockWhere }));
+  const mockSelect = vi.mocked(db.select);
+  mockSelect.mockReturnValue({ from: mockFrom } as any);
+
+  const mockUpdateWhere = vi.fn();
+  const mockSet = vi.fn(() => ({ where: mockUpdateWhere }));
+  const mockUpdate = vi.mocked(db.update);
+  mockUpdate.mockReturnValue({ set: mockSet } as any);
+
+  await syncMatches();
+
   // Verify update was called for predictions (exact score = 10 points)
   expect(db.update).toHaveBeenCalled();
   expect(mockSet).toHaveBeenCalledWith(

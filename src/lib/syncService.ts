@@ -74,8 +74,13 @@ export async function syncMatches(force = false): Promise<void> {
           .from(predictions)
           .where(whereClause);
 
+        const isBrazilMatch = apiMatch.homeTeam.name === "Brazil" || apiMatch.awayTeam.name === "Brazil";
+
         for (const pred of uncalculatedPredictions) {
-          const points = computePoints(pred.predictedHome, pred.predictedAway, homeScore, awayScore);
+          let points = computePoints(pred.predictedHome, pred.predictedAway, homeScore, awayScore);
+          if (isBrazilMatch) {
+            points = points * 2;
+          }
           await db.update(predictions)
             .set({
               pointsAwarded: points,

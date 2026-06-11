@@ -3,7 +3,7 @@
 ## Estado Atual (Funcionalidades Concluídas ✅)
 
 O Bolão está 100% funcional com:
-- Autenticação via Clerk (login/logout)
+- Autenticação via Supabase Auth (login/logout)
 - Banco de dados Supabase + Drizzle ORM (Pool de conexões otimizado `{ max: 1 }` para plano gratuito)
 - Sincronização automática e resiliente de 104 jogos da Copa 2026 (football-data.org)
 - Motor de pontuação robusto (10 / 7 / 5 / 0 pontos)
@@ -45,7 +45,7 @@ O Bolão está 100% funcional com:
 src/
 ├── app/
 │   ├── api/
-│   │   ├── auth/sync/         ← Sync Clerk → DB local
+│   │   ├── auth/sync/         ← Sync Supabase Auth → DB local
 │   │   ├── matches/           ← GET: jogos + lazy sync
 │   │   ├── predictions/       ← POST: salvar/atualizar palpite
 │   │   ├── leaderboard/       ← GET: ranking
@@ -71,10 +71,6 @@ src/
 ## Variáveis de Ambiente Necessárias
 
 ```bash
-# Clerk Auth
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
-CLERK_SECRET_KEY=sk_...
-
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=https://...supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
@@ -85,8 +81,8 @@ DATABASE_URL=postgresql://postgres:[SENHA]@db.[PROJECT].supabase.co:5432/postgre
 # Football Data API
 FOOTBALL_DATA_API_KEY=...
 
-# Admin (IDs Clerk dos admins, separados por vírgula)
-ADMIN_USER_IDS=user_xxxxxxxxxxxxxxxx
+# Admin (UUIDs Supabase dos admins, separados por vírgula)
+ADMIN_USER_IDS=uuid_xxxxxxxxxxxxxxxx
 ```
 
 ---
@@ -98,4 +94,4 @@ ADMIN_USER_IDS=user_xxxxxxxxxxxxxxxx
 3. O Next.js detecta automaticamente — zero config adicional necessária
 4. Configurar domínio personalizado (opcional)
 
-> ⚠️ Lembrar de adicionar o domínio da Vercel nas configurações de "Allowed Origins" do Clerk
+> ⚠️ Lembrar de adicionar o domínio da Vercel nas configurações de Allowed Redirect URIs do Supabase

@@ -1923,6 +1923,17 @@ export default function Home() {
                   <span className="text-xs font-black text-red-400 ml-auto">0</span>
                 </div>
               </div>
+
+              {/* Destaque Brasil & Anti-Espião */}
+              <div className="mt-4 p-4 rounded-xl border border-yellow-500/40 bg-gradient-to-r from-emerald-950/90 via-emerald-900/60 to-[#0a1a0f] flex items-start gap-3">
+                <span className="text-xl mt-0.5 select-none" role="img" aria-label="Bandeira do Brasil">🇧🇷</span>
+                <div className="text-xs leading-relaxed text-[#a3b8aa]">
+                  <span className="font-extrabold text-[#d4a017] uppercase tracking-wider block mb-1">
+                    Proteção Especial & Torcida (Jogos do Brasil)
+                  </span>
+                  Para os jogos do <strong className="text-white">Brasil 🇧🇷</strong>, o sistema ativa o modo <strong className="text-white">Anti-Espião</strong>: os palpites de todos os participantes ficam totalmente <strong className="text-white">ocultos</strong> até o início oficial da partida. Isso garante que ninguém copie os palpites dos líderes para tentar segurar a liderança. Assim que a bola rolar, as apostas de todos são reveladas para a galera secar e torcer junta!
+                </div>
+              </div>
             </div>
 
             {/* Filters for Palpites */}

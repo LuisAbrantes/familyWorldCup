@@ -181,14 +181,21 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="card-glass p-6 rounded-2xl border border-[#1a3d24]/50 flex flex-col gap-4">
-              <div className="w-12 h-12 rounded-xl bg-[#d4a017]/10 border border-[#d4a017]/25 flex items-center justify-center text-[#d4a017]">
-                <Lock className="w-6 h-6" />
+            <div className="card-glass p-6 rounded-2xl border border-[#1a3d24]/50 flex flex-col justify-between gap-4 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 bg-yellow-500/10 text-yellow-400 border-b border-l border-yellow-500/20 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-bl-lg flex items-center gap-1 select-none">
+                <span>🇧🇷 Brasil</span>
               </div>
-              <h3 className="font-bold text-lg text-[#e8e8e8]">Sem Espiar Palpites</h3>
-              <p className="text-xs text-[#9ca3af] leading-relaxed">
-                Ninguém copia palpite de ninguém. Os palpites dos outros participantes só ficam visíveis para você em jogos pendentes depois que você salvar o seu.
-              </p>
+              <div className="flex flex-col gap-4">
+                <div className="w-12 h-12 rounded-xl bg-[#d4a017]/10 border border-[#d4a017]/25 flex items-center justify-center text-[#d4a017]">
+                  <Lock className="w-6 h-6" />
+                </div>
+                <h3 className="font-bold text-lg text-[#e8e8e8] flex items-center gap-1.5">
+                  Sem Espiar Palpites 🇧🇷
+                </h3>
+                <p className="text-xs text-[#9ca3af] leading-relaxed">
+                  Para as partidas do Brasil, o anti-espião é total! Ninguém vê o palpite dos outros até o jogo começar. Evita cópias e garante a emoção de torcer e secar juntos no WhatsApp.
+                </p>
+              </div>
             </div>
 
             <div className="card-glass p-6 rounded-2xl border border-[#1a3d24]/50 flex flex-col gap-4">

@@ -7,8 +7,8 @@ User stories e critérios de aceite no formato Dado / Quando / Então. Cada crit
 **User story**: como participante, quero entrar com minha conta para que meus palpites fiquem ligados a mim.
 
 Critérios de aceite:
-- Dado que não estou logado, quando acesso qualquer rota protegida (jogos, palpites, ranking), então sou redirecionado para o login do Clerk.
-- Dado que faço login pela primeira vez, quando entro no app, então um registro em `users` é criado (ou recuperado) a partir do meu `clerkUserId`, com `displayName` vindo do meu perfil do Clerk.
+- Dado que não estou logado, quando acesso qualquer rota protegida (jogos, palpites, ranking), então sou redirecionado para o login do Supabase Auth.
+- Dado que faço login pela primeira vez, quando entro no app, então um registro em `users` é criado (ou recuperado) a partir do meu `clerkUserId` (associado ao Supabase Auth ID), com `displayName` vindo do meu perfil do Supabase.
 - Dado que já tenho perfil, quando faço login de novo, então nenhum registro duplicado é criado.
 
 ## F2. Listagem de jogos
@@ -39,7 +39,7 @@ Critérios de aceite:
 **User story**: como participante, quero que meus pontos sejam calculados sozinhos quando o jogo acaba, para não ter conferência manual.
 
 Critérios de aceite (detalhe e tabela-verdade no spec de arquitetura, seção 6):
-- Dado um jogo que passou a FINISHED com placar real, quando ocorre a sincronização, então todo palpite daquele jogo recebe `pointsAwarded` conforme as regras.
+- Dado um jogo que passou a FINISHED com placar real, quando ocorre a sincronização, então todo palpite daquele jogo recebe `pointsAwarded` conforme as regras. Se o jogo envolver a Seleção Brasileira (onde uma das equipes é "Brazil"), os pontos concedidos são dobrados (multiplicador de 2x).
 - A função de pontuação é pura e tem teste unitário cobrindo as oito linhas da tabela-verdade.
 - Recalcular um jogo já pontuado não altera o resultado (idempotência): rodar a sincronização duas vezes seguidas para o mesmo jogo FINISHED produz os mesmos pontos.
 

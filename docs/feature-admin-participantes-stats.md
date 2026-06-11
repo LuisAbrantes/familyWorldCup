@@ -15,7 +15,7 @@ Duas funcionalidades exclusivas para o administrador do bolão:
 O admin precisa ter visibilidade total sobre quem está participando e controle para lidar com situações como:
 - Familiar que se cadastrou com nome errado
 - Familiar que não deveria estar participando
-- Dúvidas sobre qual conta pertence a quem (Clerk ID vs. nome exibido)
+- Dúvidas sobre qual conta pertence a quem (ID do Supabase vs. nome exibido)
 
 ### Tela proposta
 
@@ -211,17 +211,11 @@ async function requireAdmin() {
 }
 ```
 
-Também adicionar ao matcher do Clerk middleware:
+Também assegurar a proteção das rotas admin no middleware de autenticação do Supabase:
 
 ```typescript
 // src/middleware.ts
-const isAdminRoute = createRouteMatcher(["/api/admin(.*)"]);
-
-// Dentro do clerkMiddleware:
-if (isAdminRoute(req)) {
-  await auth.protect();
-  // A verificação de isAdmin() acontece dentro de cada route handler
-}
+// Assegurar que requisições para /api/admin/* exijam um usuário autenticado no Supabase Auth e que o route handler verifique se o ID de usuário está em ADMIN_USER_IDS.
 ```
 
 ---

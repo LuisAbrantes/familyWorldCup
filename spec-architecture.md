@@ -13,23 +13,20 @@ Regra inviolável: o navegador nunca chama a football-data.org diretamente. Toda
 Servidor:
 - `DATABASE_URL`: connection string do Postgres do Neon.
 - `FOOTBALL_DATA_API_KEY`: chave da football-data.org.
-- `CLERK_SECRET_KEY`: chave secreta do Clerk.
-- `SESSION_SECRET`: segredo de sessão.
-- `ADMIN_USER_IDS`: lista separada por vírgula de IDs de usuário do Clerk com permissão de admin.
+- `ADMIN_USER_IDS`: lista separada por vírgula de UUIDs de usuário do Supabase com permissão de admin.
 
 Cliente (expostas, prefixo público):
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`: chave publicável do Clerk.
-
-Observação de migração: no app antigo do Replit a chave publicável vinha como `VITE_CLERK_PUBLISHABLE_KEY`. No Next.js o prefixo correto é `NEXT_PUBLIC_`.
+- `NEXT_PUBLIC_SUPABASE_URL`: URL do projeto do Supabase.
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: Chave anônima/publicável do Supabase.
 
 ## 3. Modelo de dados (Drizzle, Postgres)
 
 Identificadores em camelCase no TypeScript. Três tabelas.
 
 ### users
-Perfil local espelhando o usuário do Clerk. O Clerk é a fonte de verdade da identidade; aqui guardamos só o necessário para o bolão.
+Perfil local espelhando o usuário do Supabase Auth. O Supabase é a fonte de verdade da identidade; aqui guardamos só o necessário para o bolão.
 - `id`: serial, primary key.
-- `clerkUserId`: text, unique, not null. ID do usuário no Clerk.
+- `clerkUserId`: text, unique, not null. Guarda o UUID do usuário no Supabase Auth (mantendo o nome físico da coluna para compatibilidade com o banco).
 - `displayName`: text, not null. Nome exibido no ranking.
 - `createdAt`: timestamp, default now.
 
@@ -110,6 +107,8 @@ Onde "resultado" é o sinal de `home - away`: positivo (mandante vence), zero (e
 
 Os valores 10, 7, 5 e 0 devem ficar numa constante de configuração no topo do módulo, fáceis de ajustar caso a família queira outra pontuação.
 
+*Regra Especial do Brasil*: Se o jogo envolver a seleção brasileira (o time mandante ou visitante for `"Brazil"`), a pontuação resultante calculada pelo motor é multiplicada por 2 (o dobro de pontos: Placar Exato = 20 pts, Resultado+Saldo = 14 pts, Resultado Simples = 10 pts, Erro = 0 pts). Isso é processado de forma automática no fluxo de sincronização antes de persistir a pontuação.
+
 ### Tabela-verdade (casos de teste do Vitest)
 
 | Previsto | Real | Regra que casa | Pontos |
@@ -142,7 +141,7 @@ Armazenar e comparar tudo em UTC (`utcDate`). Exibir para o usuário em horário
 1. Código num repositório no GitHub.
 2. Banco: criar um projeto grátis no Neon, copiar a `DATABASE_URL`. Rodar as migrations do Drizzle contra ele.
 3. Importar o repositório na Vercel (plano Hobby). Definir todas as variáveis de ambiente da seção 2 no painel da Vercel.
-4. No painel do Clerk, adicionar o domínio da Vercel à lista de origens/instâncias permitidas.
+4. No painel do Supabase, adicionar o domínio da Vercel nas configurações de Allowed Redirect URIs.
 5. Conferir a atribuição da football-data.org no rodapé antes de publicar.
 
-Notas: a Vercel Hobby não dorme e não expira, e proíbe uso comercial (bolão de família é uso pessoal, ok). O Postgres do Neon no plano grátis não expira como o do Render. Evitar Render (Postgres grátis expira em 30 dias inativo e o serviço dorme) e Railway/Fly (viraram trial pago).
+Notas: a Vercel Hobby não dorme e não expira. O Postgres do Neon no plano grátis não expira como o do Render. Evitar Render (Postgres grátis expira em 30 dias inativo e o serviço dorme) e Railway/Fly (viraram trial pago).
