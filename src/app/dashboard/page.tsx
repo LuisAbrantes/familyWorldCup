@@ -236,7 +236,13 @@ export default function Home() {
   const [palpitePendingOnly, setPalpitePendingOnly] = useState<boolean>(false);
 
   // Admin tabs & states
-  const [activeAdminTab, setActiveAdminTab] = useState<"sync" | "users" | "stats" | "authorizations" | "rooms">("rooms");
+  const [activeAdminTab, setActiveAdminTab] = useState<"sync" | "users" | "stats" | "authorizations" | "rooms" | "matches">("rooms");
+  const [editingMatchId, setEditingMatchId] = useState<number | null>(null);
+  const [adminHomeScore, setAdminHomeScore] = useState<number>(0);
+  const [adminAwayScore, setAdminAwayScore] = useState<number>(0);
+  const [adminMatchStatus, setAdminMatchStatus] = useState<string>("FINISHED");
+  const [savingAdminMatch, setSavingAdminMatch] = useState<Record<number, boolean>>({});
+  const [adminMatchFeedback, setAdminMatchFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [adminUsers, setAdminUsers] = useState<any[]>([]);
   const [adminStats, setAdminStats] = useState<any>(null);
   const [loadingAdminUsers, setLoadingAdminUsers] = useState(false);
@@ -1684,18 +1690,32 @@ export default function Home() {
                 const isFinished = match.status === "FINISHED";
                 const isLive = match.status === "IN_PLAY" || match.status === "PAUSED";
 
-                return (
-                  <div
-                    key={match.id}
-                    className="match-card p-5 animate-slideUp"
-                    style={{ animationDelay: `${Math.min(i, 8) * 50}ms` }}
-                  >
-                    {/* Header */}
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-[#2d8a4e] uppercase tracking-wider">
-                          {stageLabel(match.stage)}
-                        </span>
+                  const isBrazil = match.homeTeamName === "Brazil" || match.awayTeamName === "Brazil";
+
+                  return (
+                    <div
+                      key={match.id}
+                      className={`match-card p-5 animate-slideUp border-l-4 ${
+                        isBrazil
+                          ? "border-l-yellow-500 bg-gradient-to-r from-emerald-950/20 to-[#0a1a0f] ring-1 ring-emerald-500/10"
+                          : "border-l-transparent"
+                      }`}
+                      style={{ animationDelay: `${Math.min(i, 8) * 50}ms` }}
+                    >
+                      {/* Header */}
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-[#2d8a4e] uppercase tracking-wider">
+                            {stageLabel(match.stage)}
+                          </span>
+                          {isBrazil && (
+                            <>
+                              <span className="text-[#1a3d24]">•</span>
+                              <span className="text-[#d4a017] uppercase tracking-widest font-black animate-pulse flex items-center gap-1">
+                                🇧🇷 VALE O DOBRO!
+                              </span>
+                            </>
+                          )}
                         {match.groupName && (
                           <>
                             <span className="text-[#1a3d24]">•</span>
@@ -1754,6 +1774,67 @@ export default function Home() {
                         <span className="text-sm font-bold text-[#e8e8e8] text-center leading-tight">{match.awayTeamName}</span>
                       </div>
                     </div>
+
+                    {/* Seu palpite para este jogo */}
+                    {(() => {
+                      const userPred = predictions[match.id];
+                      if (!userPred) return null;
+
+                      const isFinished = match.status === "FINISHED";
+                      const isBrazil = match.homeTeamName === "Brazil" || match.awayTeamName === "Brazil";
+
+                      return (
+                        <div className="mt-4 p-3 rounded-xl bg-[#0a1a0f]/80 border border-[#1a3d24] flex flex-col gap-2">
+                          <div className="flex items-center justify-between text-[10px] font-bold text-[#9ca3af] uppercase tracking-wider">
+                            <span>Seu Palpite</span>
+                            {isFinished && userPred.pointsAwarded !== null && userPred.pointsAwarded !== undefined && (
+                              <span
+                                className={`px-2 py-0.5 rounded font-black border text-[9px] uppercase tracking-wider ${
+                                  (isBrazil ? userPred.pointsAwarded === 20 : userPred.pointsAwarded === 10)
+                                    ? "bg-emerald-950/40 text-emerald-400 border-emerald-500/30"
+                                    : (isBrazil ? userPred.pointsAwarded === 14 : userPred.pointsAwarded === 7)
+                                    ? "bg-lime-950/20 text-lime-400 border-lime-500/30"
+                                    : (isBrazil ? userPred.pointsAwarded === 10 : userPred.pointsAwarded === 5)
+                                    ? "bg-[#d4a017]/10 text-[#d4a017] border-[#d4a017]/20"
+                                    : "bg-red-950/20 text-red-400 border-red-900/30"
+                                }`}
+                              >
+                                {userPred.pointsAwarded > 0 ? (
+                                  <>
+                                    +{userPred.pointsAwarded} pts (
+                                    {(() => {
+                                      const pts = userPred.pointsAwarded;
+                                      if (isBrazil) {
+                                        if (pts === 20) return "Placar Exato";
+                                        if (pts === 14) return "Resultado + Saldo";
+                                        return "Apenas Vencedor";
+                                      } else {
+                                        if (pts === 10) return "Placar Exato";
+                                        if (pts === 7) return "Resultado + Saldo";
+                                        return "Apenas Vencedor";
+                                      }
+                                    })()}
+                                    )
+                                  </>
+                                ) : (
+                                  "❌ 0 pts (Errou)"
+                                )}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-black text-[#e8e8e8]">
+                              {userPred.predictedHome} x {userPred.predictedAway}
+                            </span>
+                            {isFinished && (
+                              <span className="text-[10px] font-semibold text-[#9ca3af]">
+                                {userPred.pointsAwarded && userPred.pointsAwarded > 0 ? "✅ Acertou" : "❌ Errou"}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {/* Social predictions (Palpites do Grupo) */}
                     {socialPredictions[match.id] && (
@@ -1905,17 +1986,17 @@ export default function Home() {
                 <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#0a1a0f] border border-[#1a3d24]">
                   <div className="w-2 h-2 rounded-full bg-emerald-500" />
                   <span className="text-xs text-[#9ca3af]">Exato</span>
-                  <span className="text-xs font-black text-emerald-400 ml-auto">+10</span>
+                  <span className="text-xs font-black text-emerald-400 ml-auto">+10 (+20 🇧🇷)</span>
                 </div>
                 <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#0a1a0f] border border-[#1a3d24]">
                   <div className="w-2 h-2 rounded-full bg-lime-500" />
                   <span className="text-xs text-[#9ca3af]">Resultado+Saldo</span>
-                  <span className="text-xs font-black text-lime-400 ml-auto">+7</span>
+                  <span className="text-xs font-black text-lime-400 ml-auto">+7 (+14 🇧🇷)</span>
                 </div>
                 <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#0a1a0f] border border-[#1a3d24]">
                   <div className="w-2 h-2 rounded-full bg-[#d4a017]" />
                   <span className="text-xs text-[#9ca3af]">Vencedor</span>
-                  <span className="text-xs font-black text-[#d4a017] ml-auto">+5</span>
+                  <span className="text-xs font-black text-[#d4a017] ml-auto">+5 (+10 🇧🇷)</span>
                 </div>
                 <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#0a1a0f] border border-[#1a3d24]">
                   <div className="w-2 h-2 rounded-full bg-red-500" />
@@ -2019,6 +2100,8 @@ export default function Home() {
                   const isLocked =
                     (match.status !== "SCHEDULED" && match.status !== "TIMED") ||
                     now.getTime() >= new Date(match.utcDate).getTime();
+                  const isFinished = match.status === "FINISHED";
+                  const isBrazil = match.homeTeamName === "Brazil" || match.awayTeamName === "Brazil";
 
                   const inputBorderClass = isSaving
                     ? "border-amber-500/60 ring-1 ring-amber-500/30"
@@ -2031,7 +2114,11 @@ export default function Home() {
                   return (
                     <div
                       key={match.id}
-                      className="match-card p-3 sm:p-5 flex flex-col gap-3 sm:gap-4 animate-slideUp"
+                      className={`match-card p-3 sm:p-5 flex flex-col gap-3 sm:gap-4 animate-slideUp border-l-4 ${
+                        isBrazil
+                          ? "border-l-yellow-500 bg-gradient-to-r from-emerald-950/20 to-[#0a1a0f] ring-1 ring-emerald-500/10"
+                          : "border-l-transparent"
+                      }`}
                       style={{ animationDelay: `${Math.min(i, 6) * 40}ms` }}
                     >
                       {/* Match header */}
@@ -2040,7 +2127,14 @@ export default function Home() {
                           <span className="text-[#2d8a4e] uppercase tracking-wider">
                             {stageLabel(match.stage)}
                           </span>
-                          {match.groupName && (
+                          {isBrazil ? (
+                            <>
+                              <span className="text-[#1a3d24]">•</span>
+                              <span className="text-[#d4a017] uppercase tracking-widest font-black animate-pulse flex items-center gap-1">
+                                🇧🇷 VALE O DOBRO!
+                              </span>
+                            </>
+                          ) : match.groupName && (
                             <>
                               <span className="text-[#1a3d24]">•</span>
                               <span className="text-[#9ca3af] uppercase">
@@ -2110,122 +2204,179 @@ export default function Home() {
                             Seu Palpite
                           </div>
 
-                          <div className="flex items-center gap-2">
-                            {/* Home input */}
-                            <div className="flex items-center gap-1">
-                              {!isLocked && (
-                                <button
-                                  onClick={() => adjustScore(match.id, "home", -1)}
-                                  className="w-10 h-10 rounded-lg bg-[#0d2214] border border-[#1a3d24] flex items-center justify-center hover:bg-[#1a3d24] active:scale-95 transition-all cursor-pointer shrink-0"
-                                  aria-label="Reduzir gols mandante"
-                                >
-                                  <Minus className="w-4 h-4 text-[#9ca3af]" />
-                                </button>
-                              )}
-                              {isLocked ? (
-                                <div className="w-10 h-10 rounded-lg bg-[#0d2214] border border-[#1a3d24] flex items-center justify-center text-sm font-bold text-[#e8e8e8]">
-                                  {savedPred?.predictedHome ?? "-"}
-                                </div>
-                              ) : (
-                                <input
-                                  type="text"
-                                  inputMode="numeric"
-                                  pattern="[0-9]*"
-                                  value={localPred.home}
-                                  onChange={(e) => {
-                                    const val = e.target.value.replace(/[^0-9]/g, "");
-                                    const num = val === "" ? 0 : parseInt(val, 10);
-                                    setPredictedScores((prev) => ({
-                                      ...prev,
-                                      [match.id]: { home: num, away: localPred.away },
-                                    }));
-                                    debouncedSavePrediction(match.id);
-                                  }}
-                                  className={`w-11 h-11 rounded-lg bg-[#0a1a0f] border text-center text-sm font-black text-[#e8e8e8] focus:outline-none focus:ring-1 focus:ring-[#d4a017] transition-all ${inputBorderClass}`}
-                                />
-                              )}
-                              {!isLocked && (
-                                <button
-                                  onClick={() => adjustScore(match.id, "home", 1)}
-                                  className="w-10 h-10 rounded-lg bg-[#0d2214] border border-[#1a3d24] flex items-center justify-center hover:bg-[#1a3d24] active:scale-95 transition-all cursor-pointer shrink-0"
-                                  aria-label="Aumentar gols mandante"
-                                >
-                                  <Plus className="w-4 h-4 text-[#9ca3af]" />
-                                </button>
-                              )}
-                            </div>
-
-                            <span className="text-[#6b7280] font-black text-xs">X</span>
-
-                            {/* Away input */}
-                            <div className="flex items-center gap-1">
-                              {!isLocked && (
-                                <button
-                                  onClick={() => adjustScore(match.id, "away", -1)}
-                                  className="w-10 h-10 rounded-lg bg-[#0d2214] border border-[#1a3d24] flex items-center justify-center hover:bg-[#1a3d24] active:scale-95 transition-all cursor-pointer shrink-0"
-                                  aria-label="Reduzir gols visitante"
-                                >
-                                  <Minus className="w-4 h-4 text-[#9ca3af]" />
-                                </button>
-                              )}
-                              {isLocked ? (
-                                <div className="w-10 h-10 rounded-lg bg-[#0d2214] border border-[#1a3d24] flex items-center justify-center text-sm font-bold text-[#e8e8e8]">
-                                  {savedPred?.predictedAway ?? "-"}
-                                </div>
-                              ) : (
-                                <input
-                                  type="text"
-                                  inputMode="numeric"
-                                  pattern="[0-9]*"
-                                  value={localPred.away}
-                                  onChange={(e) => {
-                                    const val = e.target.value.replace(/[^0-9]/g, "");
-                                    const num = val === "" ? 0 : parseInt(val, 10);
-                                    setPredictedScores((prev) => ({
-                                      ...prev,
-                                      [match.id]: { home: localPred.home, away: num },
-                                    }));
-                                    debouncedSavePrediction(match.id);
-                                  }}
-                                  className={`w-11 h-11 rounded-lg bg-[#0a1a0f] border text-center text-sm font-black text-[#e8e8e8] focus:outline-none focus:ring-1 focus:ring-[#d4a017] transition-all ${inputBorderClass}`}
-                                />
-                              )}
-                              {!isLocked && (
-                                <button
-                                  onClick={() => adjustScore(match.id, "away", 1)}
-                                  className="w-10 h-10 rounded-lg bg-[#0d2214] border border-[#1a3d24] flex items-center justify-center hover:bg-[#1a3d24] active:scale-95 transition-all cursor-pointer shrink-0"
-                                  aria-label="Aumentar gols visitante"
-                                >
-                                  <Plus className="w-4 h-4 text-[#9ca3af]" />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Save feedback badge */}
-                          <div className="w-full mt-2 text-center h-4">
-                            {isSaving ? (
-                              <span className="text-[9px] text-amber-400 font-bold flex items-center justify-center gap-1">
-                                <RefreshCw className="w-2.5 h-2.5 animate-spin" /> Salvando...
-                              </span>
-                            ) : feedback?.type === "success" ? (
-                              <span className="text-[9px] text-emerald-400 font-bold flex items-center justify-center gap-0.5 animate-fadeIn">
-                                <Check className="w-2.5 h-2.5" /> Palpite Salvo!
-                              </span>
-                            ) : feedback?.type === "error" ? (
-                              <span className="text-[9px] text-red-400 font-bold flex items-center justify-center gap-0.5 animate-fadeIn">
-                                <AlertCircle className="w-2.5 h-2.5" /> {feedback.text.substring(0, 18)}
-                              </span>
-                            ) : (savedPred && savedPred.predictedHome === localPred.home && savedPred.predictedAway === localPred.away) ? (
-                              <span className="text-[9px] text-emerald-500/80 font-semibold flex items-center justify-center gap-0.5">
-                                <CheckCircle className="w-2.5 h-2.5 text-emerald-500/60" /> Palpite Salvo
-                              </span>
+                          {isFinished ? (
+                            savedPred ? (
+                              <div className="flex flex-col items-center gap-1.5 w-full">
+                                <span className="text-lg font-black text-[#e8e8e8]">
+                                  {savedPred.predictedHome} x {savedPred.predictedAway}
+                                </span>
+                                {savedPred.pointsAwarded !== null && savedPred.pointsAwarded !== undefined ? (
+                                  <span
+                                    className={`text-[9px] px-2.5 py-0.5 rounded font-black border uppercase tracking-wider text-center ${
+                                      (match.homeTeamName === "Brazil" || match.awayTeamName === "Brazil"
+                                        ? savedPred.pointsAwarded === 20
+                                        : savedPred.pointsAwarded === 10)
+                                        ? "bg-emerald-950/40 text-emerald-400 border-emerald-500/30"
+                                        : (match.homeTeamName === "Brazil" || match.awayTeamName === "Brazil"
+                                          ? savedPred.pointsAwarded === 14
+                                          : savedPred.pointsAwarded === 7)
+                                        ? "bg-lime-950/20 text-lime-400 border-lime-500/30"
+                                        : (match.homeTeamName === "Brazil" || match.awayTeamName === "Brazil"
+                                          ? savedPred.pointsAwarded === 10
+                                          : savedPred.pointsAwarded === 5)
+                                        ? "bg-[#d4a017]/10 text-[#d4a017] border-[#d4a017]/20"
+                                        : "bg-red-950/20 text-red-400 border-red-900/30"
+                                    }`}
+                                  >
+                                    {savedPred.pointsAwarded > 0 ? (
+                                      <>
+                                        +{savedPred.pointsAwarded} pts (
+                                        {(() => {
+                                          const points = savedPred.pointsAwarded;
+                                          const isBrazil = match.homeTeamName === "Brazil" || match.awayTeamName === "Brazil";
+                                          if (isBrazil) {
+                                            if (points === 20) return "Placar Exato";
+                                            if (points === 14) return "Resultado + Saldo";
+                                            return "Apenas Vencedor";
+                                          } else {
+                                            if (points === 10) return "Placar Exato";
+                                            if (points === 7) return "Resultado + Saldo";
+                                            return "Apenas Vencedor";
+                                          }
+                                        })()}
+                                        )
+                                      </>
+                                    ) : (
+                                      "❌ 0 pts (Errou)"
+                                    )}
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] text-[#9ca3af] italic">Aguardando cálculo...</span>
+                                )}
+                              </div>
                             ) : (
-                              <span className="text-[9px] text-amber-500/80 font-bold flex items-center justify-center gap-0.5 animate-pulse">
-                                ● Modificado (Salvando...)
-                              </span>
-                            )}
-                          </div>
+                              <span className="text-xs text-[#6b7280] italic py-2">Sem palpite registrado</span>
+                            )
+                          ) : (
+                            <>
+                              <div className="flex items-center gap-2">
+                                {/* Home input */}
+                                <div className="flex items-center gap-1">
+                                  {!isLocked && (
+                                    <button
+                                      onClick={() => adjustScore(match.id, "home", -1)}
+                                      className="w-10 h-10 rounded-lg bg-[#0d2214] border border-[#1a3d24] flex items-center justify-center hover:bg-[#1a3d24] active:scale-95 transition-all cursor-pointer shrink-0"
+                                      aria-label="Reduzir gols mandante"
+                                    >
+                                      <Minus className="w-4 h-4 text-[#9ca3af]" />
+                                    </button>
+                                  )}
+                                  {isLocked ? (
+                                    <div className="w-10 h-10 rounded-lg bg-[#0d2214] border border-[#1a3d24] flex items-center justify-center text-sm font-bold text-[#e8e8e8]">
+                                      {savedPred?.predictedHome ?? "-"}
+                                    </div>
+                                  ) : (
+                                    <input
+                                      type="text"
+                                      inputMode="numeric"
+                                      pattern="[0-9]*"
+                                      value={localPred.home}
+                                      onChange={(e) => {
+                                        const val = e.target.value.replace(/[^0-9]/g, "");
+                                        const num = val === "" ? 0 : parseInt(val, 10);
+                                        setPredictedScores((prev) => ({
+                                          ...prev,
+                                          [match.id]: { home: num, away: localPred.away },
+                                        }));
+                                        debouncedSavePrediction(match.id);
+                                      }}
+                                      className={`w-11 h-11 rounded-lg bg-[#0a1a0f] border text-center text-sm font-black text-[#e8e8e8] focus:outline-none focus:ring-1 focus:ring-[#d4a017] transition-all ${inputBorderClass}`}
+                                    />
+                                  )}
+                                  {!isLocked && (
+                                    <button
+                                      onClick={() => adjustScore(match.id, "home", 1)}
+                                      className="w-10 h-10 rounded-lg bg-[#0d2214] border border-[#1a3d24] flex items-center justify-center hover:bg-[#1a3d24] active:scale-95 transition-all cursor-pointer shrink-0"
+                                      aria-label="Aumentar gols mandante"
+                                    >
+                                      <Plus className="w-4 h-4 text-[#9ca3af]" />
+                                    </button>
+                                  )}
+                                </div>
+
+                                <span className="text-[#6b7280] font-black text-xs">X</span>
+
+                                {/* Away input */}
+                                <div className="flex items-center gap-1">
+                                  {!isLocked && (
+                                    <button
+                                      onClick={() => adjustScore(match.id, "away", -1)}
+                                      className="w-10 h-10 rounded-lg bg-[#0d2214] border border-[#1a3d24] flex items-center justify-center hover:bg-[#1a3d24] active:scale-95 transition-all cursor-pointer shrink-0"
+                                      aria-label="Reduzir gols visitante"
+                                    >
+                                      <Minus className="w-4 h-4 text-[#9ca3af]" />
+                                    </button>
+                                  )}
+                                  {isLocked ? (
+                                    <div className="w-10 h-10 rounded-lg bg-[#0d2214] border border-[#1a3d24] flex items-center justify-center text-sm font-bold text-[#e8e8e8]">
+                                      {savedPred?.predictedAway ?? "-"}
+                                    </div>
+                                  ) : (
+                                    <input
+                                      type="text"
+                                      inputMode="numeric"
+                                      pattern="[0-9]*"
+                                      value={localPred.away}
+                                      onChange={(e) => {
+                                        const val = e.target.value.replace(/[^0-9]/g, "");
+                                        const num = val === "" ? 0 : parseInt(val, 10);
+                                        setPredictedScores((prev) => ({
+                                          ...prev,
+                                          [match.id]: { home: localPred.home, away: num },
+                                        }));
+                                        debouncedSavePrediction(match.id);
+                                      }}
+                                      className={`w-11 h-11 rounded-lg bg-[#0a1a0f] border text-center text-sm font-black text-[#e8e8e8] focus:outline-none focus:ring-1 focus:ring-[#d4a017] transition-all ${inputBorderClass}`}
+                                    />
+                                  )}
+                                  {!isLocked && (
+                                    <button
+                                      onClick={() => adjustScore(match.id, "away", 1)}
+                                      className="w-10 h-10 rounded-lg bg-[#0d2214] border border-[#1a3d24] flex items-center justify-center hover:bg-[#1a3d24] active:scale-95 transition-all cursor-pointer shrink-0"
+                                      aria-label="Aumentar gols visitante"
+                                    >
+                                      <Plus className="w-4 h-4 text-[#9ca3af]" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Save feedback badge */}
+                              <div className="w-full mt-2 text-center h-4">
+                                {isSaving ? (
+                                  <span className="text-[9px] text-amber-400 font-bold flex items-center justify-center gap-1">
+                                    <RefreshCw className="w-2.5 h-2.5 animate-spin" /> Salvando...
+                                  </span>
+                                ) : feedback?.type === "success" ? (
+                                  <span className="text-[9px] text-emerald-400 font-bold flex items-center justify-center gap-0.5 animate-fadeIn">
+                                    <Check className="w-2.5 h-2.5" /> Palpite Salvo!
+                                  </span>
+                                ) : feedback?.type === "error" ? (
+                                  <span className="text-[9px] text-red-400 font-bold flex items-center justify-center gap-0.5 animate-fadeIn">
+                                    <AlertCircle className="w-2.5 h-2.5" /> {feedback.text.substring(0, 18)}
+                                  </span>
+                                ) : (savedPred && savedPred.predictedHome === localPred.home && savedPred.predictedAway === localPred.away) ? (
+                                  <span className="text-[9px] text-emerald-500/80 font-semibold flex items-center justify-center gap-0.5">
+                                    <CheckCircle className="w-2.5 h-2.5 text-emerald-500/60" /> Palpite Salvo
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] text-amber-500/80 font-bold flex items-center justify-center gap-0.5 animate-pulse">
+                                    ● Modificado (Salvando...)
+                                  </span>
+                                )}
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
 
@@ -2253,13 +2404,20 @@ export default function Home() {
                                             {isFinished && hasPoints && (
                                               <span
                                                 className={`ml-1.5 text-[9px] px-1.5 py-0.5 rounded font-black border ${
-                                                  p.prediction.pointsAwarded === 10
-                                                    ? "bg-emerald-950/20 text-emerald-400 border-emerald-900/30"
-                                                    : p.prediction.pointsAwarded === 7
-                                                    ? "bg-lime-950/20 text-lime-400 border-lime-900/30"
-                                                    : p.prediction.pointsAwarded === 5
-                                                    ? "bg-[#d4a017]/10 text-[#d4a017] border-[#d4a017]/20"
-                                                    : "bg-red-950/20 text-red-400 border-red-900/30"
+                                                  (() => {
+                                                    const points = p.prediction.pointsAwarded;
+                                                    const isBrazil = match.homeTeamName === "Brazil" || match.awayTeamName === "Brazil";
+                                                    if (isBrazil) {
+                                                      if (points === 20) return "bg-emerald-950/20 text-emerald-400 border-emerald-900/30";
+                                                      if (points === 14) return "bg-lime-950/20 text-lime-400 border-lime-900/30";
+                                                      if (points === 10) return "bg-[#d4a017]/10 text-[#d4a017] border-[#d4a017]/20";
+                                                    } else {
+                                                      if (points === 10) return "bg-emerald-950/20 text-emerald-400 border-emerald-900/30";
+                                                      if (points === 7) return "bg-lime-950/20 text-lime-400 border-lime-900/30";
+                                                      if (points === 5) return "bg-[#d4a017]/10 text-[#d4a017] border-[#d4a017]/20";
+                                                    }
+                                                    return "bg-red-950/20 text-red-400 border-red-900/30";
+                                                  })()
                                                 }`}
                                               >
                                                 +{p.prediction.pointsAwarded} pts
@@ -2320,6 +2478,17 @@ export default function Home() {
               >
                 <Settings className="w-4 h-4" />
                 Sincronização
+              </button>
+              <button
+                onClick={() => setActiveAdminTab("matches")}
+                className={`px-4 py-2 font-bold text-sm transition-all border-b-2 cursor-pointer flex items-center gap-2 ${
+                  activeAdminTab === "matches"
+                    ? "border-[#d4a017] text-[#d4a017]"
+                    : "border-transparent text-[#9ca3af] hover:text-[#e8e8e8]"
+                }`}
+              >
+                <Calendar className="w-4 h-4" />
+                Gerenciar Jogos
               </button>
               <button
                 onClick={() => setActiveAdminTab("users")}
@@ -2490,6 +2659,217 @@ export default function Home() {
                         })}
                       </tbody>
                     </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Sub-tab: Matches (Gerenciar Jogos/Placares) */}
+            {activeAdminTab === "matches" && (
+              <div className="flex flex-col gap-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-bold text-[#e8e8e8] flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-[#d4a017]" />
+                    Gerenciar Jogos e Resultados Manuais
+                  </h3>
+                </div>
+
+                {/* Filters */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-2xl bg-[#0d2214]/60 border border-[#1a3d24]">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-wider">Fase</label>
+                    <select
+                      value={stageFilter}
+                      onChange={(e) => setStageFilter(e.target.value)}
+                      className="w-full bg-[#0a1a0f] border border-[#1a3d24] rounded-lg py-2 px-3 text-sm text-[#e8e8e8] focus:outline-none focus:border-[#2d8a4e] transition-colors cursor-pointer"
+                    >
+                      <option value="ALL">Todas as Fases</option>
+                      {availableStages.map((stage) => (
+                        <option key={stage} value={stage}>
+                          {stageLabel(stage)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-wider">Buscar Seleção</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Brasil, México..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full bg-[#0a1a0f] border border-[#1a3d24] rounded-lg py-2 px-3 text-sm text-[#e8e8e8] placeholder:text-[#6b7280] focus:outline-none focus:border-[#2d8a4e] transition-colors"
+                    />
+                  </div>
+                </div>
+
+                {/* Match List for Admin */}
+                <div className="flex flex-col gap-3 max-h-[600px] overflow-y-auto pr-1">
+                  {(() => {
+                    const filtered = matches.filter((match) => {
+                      if (stageFilter !== "ALL" && match.stage !== stageFilter) return false;
+                      if (searchQuery.trim() !== "") {
+                        const query = searchQuery.toLowerCase();
+                        if (!match.homeTeamName.toLowerCase().includes(query) && !match.awayTeamName.toLowerCase().includes(query)) return false;
+                      }
+                      return true;
+                    });
+
+                    if (filtered.length === 0) {
+                      return (
+                        <div className="card-glass rounded-2xl p-8 text-center text-[#9ca3af] text-sm">
+                          Nenhum jogo encontrado com os filtros selecionados.
+                        </div>
+                      );
+                    }
+
+                    return filtered.map((match) => {
+                      const isEditing = editingMatchId === match.id;
+                      const isSaving = savingAdminMatch[match.id] || false;
+
+                      const handleSave = async (mId: number, hScore: number, aScore: number, status: string) => {
+                        setSavingAdminMatch(prev => ({ ...prev, [mId]: true }));
+                        setAdminMatchFeedback(null);
+                        try {
+                          const { data: { session } } = await supabase.auth.getSession();
+                          if (!session) throw new Error("Não autenticado");
+
+                          const res = await fetch("/api/admin/matches", {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": "application/json",
+                              Authorization: `Bearer ${session.access_token}`
+                            },
+                            body: JSON.stringify({
+                              matchId: mId,
+                              homeScore: hScore,
+                              awayScore: aScore,
+                              status: status
+                            })
+                          });
+
+                          const data = await res.json();
+                          if (!res.ok) throw new Error(data.error || "Erro ao atualizar partida");
+
+                          // Recarrega os dados da sala
+                          if (activeRoomId) {
+                            await loadRoomData(activeRoomId, session.access_token);
+                          }
+                          setEditingMatchId(null);
+                          setAdminMatchFeedback({ type: "success", text: `Jogo atualizado com sucesso!` });
+                        } catch (err: any) {
+                          setAdminMatchFeedback({ type: "error", text: err.message });
+                        } finally {
+                          setSavingAdminMatch(prev => ({ ...prev, [mId]: false }));
+                        }
+                      };
+
+                      return (
+                        <div key={match.id} className="match-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="flex flex-col gap-1 min-w-[200px]">
+                            <div className="text-[9px] font-bold text-[#2d8a4e] uppercase tracking-wider">
+                              {stageLabel(match.stage)} {match.groupName ? `• ${match.groupName.replace("_", " ")}` : ""}
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs font-bold text-[#e8e8e8]">{match.homeTeamName}</span>
+                              <span className="text-[10px] text-[#6b7280]">vs</span>
+                              <span className="text-xs font-bold text-[#e8e8e8]">{match.awayTeamName}</span>
+                              {(match.homeTeamName === "Brazil" || match.awayTeamName === "Brazil") && (
+                                <span className="text-xs select-none">🇧🇷</span>
+                              )}
+                            </div>
+                            <span className="text-[9px] text-[#6b7280]">{formatMatchDateShort(match.utcDate)}</span>
+                            <span className="text-[9px] text-amber-500 font-bold">Status Atual: {match.status}</span>
+                          </div>
+
+                          {/* Placar e Edição */}
+                          <div className="flex items-center gap-3">
+                            {isEditing ? (
+                              <div className="flex flex-col gap-2 p-3 rounded-lg bg-[#0a1a0f] border border-[#1a3d24]">
+                                <div className="flex items-center gap-2">
+                                  {/* Home Input */}
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={adminHomeScore}
+                                    onChange={(e) => setAdminHomeScore(parseInt(e.target.value, 10) || 0)}
+                                    className="w-10 h-10 bg-[#0d2214] border border-[#1a3d24] text-center font-bold text-[#e8e8e8] rounded"
+                                  />
+                                  <span className="text-[#6b7280] font-bold">x</span>
+                                  {/* Away Input */}
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={adminAwayScore}
+                                    onChange={(e) => setAdminAwayScore(parseInt(e.target.value, 10) || 0)}
+                                    className="w-10 h-10 bg-[#0d2214] border border-[#1a3d24] text-center font-bold text-[#e8e8e8] rounded"
+                                  />
+                                </div>
+                                <div className="flex flex-col gap-1 mt-1">
+                                  <label className="text-[8px] font-bold text-[#9ca3af] uppercase">Status</label>
+                                  <select
+                                    value={adminMatchStatus}
+                                    onChange={(e) => setAdminMatchStatus(e.target.value)}
+                                    className="bg-[#0d2214] border border-[#1a3d24] text-xs text-[#e8e8e8] rounded p-1"
+                                  >
+                                    <option value="TIMED">Agendado (TIMED)</option>
+                                    <option value="IN_PLAY">Ao Vivo (IN_PLAY)</option>
+                                    <option value="FINISHED">Finalizado (FINISHED)</option>
+                                  </select>
+                                </div>
+                                <div className="flex gap-2 mt-2">
+                                  <button
+                                    onClick={() => handleSave(match.id, adminHomeScore, adminAwayScore, adminMatchStatus)}
+                                    disabled={isSaving}
+                                    className="px-2 py-1 rounded bg-[#d4a017] hover:bg-[#e6b422] text-[#0a1a0f] font-bold text-[10px] cursor-pointer"
+                                  >
+                                    {isSaving ? "Salvando..." : "Salvar"}
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingMatchId(null)}
+                                    className="px-2 py-1 rounded bg-[#1a3d24] hover:bg-[#2d8a4e] text-[#9ca3af] hover:text-[#e8e8e8] font-bold text-[10px] cursor-pointer"
+                                  >
+                                    Cancelar
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#0a1a0f] border border-[#1a3d24]">
+                                  <span className="text-sm font-black text-[#e8e8e8]">{match.homeScore ?? "-"}</span>
+                                  <span className="text-[10px] text-[#6b7280]">x</span>
+                                  <span className="text-sm font-black text-[#e8e8e8]">{match.awayScore ?? "-"}</span>
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    setEditingMatchId(match.id);
+                                    setAdminHomeScore(match.homeScore ?? 0);
+                                    setAdminAwayScore(match.awayScore ?? 0);
+                                    setAdminMatchStatus(match.status);
+                                  }}
+                                  className="px-3 py-1.5 rounded-lg bg-[#1a3d24] hover:bg-[#2d8a4e] text-xs font-bold text-[#e8e8e8] cursor-pointer transition-all"
+                                >
+                                  Editar Placar
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+
+                {adminMatchFeedback && (
+                  <div
+                    className={`p-3 rounded-lg border text-sm flex items-center gap-2 mt-2 ${
+                      adminMatchFeedback.type === "success"
+                        ? "bg-emerald-950/20 border-emerald-900/50 text-emerald-400 animate-fadeIn"
+                        : "bg-red-950/20 border-red-900/50 text-red-400 animate-fadeIn"
+                    }`}
+                  >
+                    {adminMatchFeedback.type === "success" ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                    <span>{adminMatchFeedback.text}</span>
                   </div>
                 )}
               </div>

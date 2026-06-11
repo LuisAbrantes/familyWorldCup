@@ -214,7 +214,7 @@ export default function LandingPage() {
               </div>
               <h3 className="font-bold text-lg text-[#e8e8e8]">Pontuação Justa</h3>
               <p className="text-xs text-[#9ca3af] leading-relaxed">
-                Sistema de pontos claro: 10 pontos para placar exato, 7 pontos para acerto de vencedor + saldo, 5 pontos para acerto simples de vencedor e 0 para erros.
+                Sistema de pontos claro: 10 pontos para placar exato, 7 pontos para acerto de vencedor + saldo, 5 pontos para acerto simples de vencedor e 0 para erros. Para os jogos do <strong>Brasil 🇧🇷</strong>, a pontuação vale o <strong>dobro</strong> (20, 14 ou 10 pontos)!
               </p>
             </div>
           </div>
