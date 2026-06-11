@@ -549,6 +549,14 @@ export default function Home() {
       const matchesRes = await fetch(`/api/matches?roomId=${roomId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      if (matchesRes.status === 401 || matchesRes.status === 403) {
+        console.warn("[Auth] Sessão inválida ou expirada detectada (matchesRes). Efetuando logout...");
+        await supabase.auth.signOut();
+        setUser(null);
+        setIsAdmin(false);
+        setIsCreator(false);
+        return;
+      }
       if (!matchesRes.ok) throw new Error("Erro ao carregar os jogos do grupo.");
       const matchesData = await matchesRes.json();
       setMatches(matchesData.matches);
@@ -571,6 +579,14 @@ export default function Home() {
       const leaderboardRes = await fetch(`/api/leaderboard?roomId=${roomId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      if (leaderboardRes.status === 401 || leaderboardRes.status === 403) {
+        console.warn("[Auth] Sessão inválida ou expirada detectada (leaderboardRes). Efetuando logout...");
+        await supabase.auth.signOut();
+        setUser(null);
+        setIsAdmin(false);
+        setIsCreator(false);
+        return;
+      }
       if (!leaderboardRes.ok) throw new Error("Erro ao carregar a classificação do grupo.");
       const leaderboardData = await leaderboardRes.json();
       setLeaderboard(leaderboardData.leaderboard);
