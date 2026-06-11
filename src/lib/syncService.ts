@@ -30,6 +30,15 @@ export async function syncMatches(force = false): Promise<void> {
       const homeScore = apiMatch.score.fullTime.home;
       const awayScore = apiMatch.score.fullTime.away;
 
+      const localMatch = await db.query.matches.findFirst({
+        where: eq(matches.id, matchId),
+      });
+
+      if (localMatch && localMatch.status === "FINISHED" && (status === "TIMED" || status === "SCHEDULED")) {
+        console.log(`[Sync Service] Ignorando atualização da API para o jogo ${matchId} (${apiMatch.homeTeam.name} vs ${apiMatch.awayTeam.name}) pois já está FINISHED localmente.`);
+        continue;
+      }
+
       // Upsert match
       await db.insert(matches)
         .values({
