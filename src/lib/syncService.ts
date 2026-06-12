@@ -6,58 +6,51 @@ import { eq, and, isNull } from "drizzle-orm";
 
 const SYNC_TTL_MS = 60 * 1000; // 60 seconds
 
-export async function syncMatches(force = false): Promise<void> {
-  // 1. Check if we need to sync based on TTL
-  const latestMatch = await db.query.matches.findFirst({
-    orderBy: (matches, { desc }) => [desc(matches.lastSyncedAt)],
-  });
+let activeSyncPromise: Promise<void> | null = null;
 
-  const now = new Date();
-  if (!force && latestMatch && now.getTime() - new Date(latestMatch.lastSyncedAt).getTime() < SYNC_TTL_MS) {
-    console.log("[Sync Service] Skipping sync, cache is still fresh.");
-    return;
+export async function syncMatches(force = false): Promise<void> {
+  if (activeSyncPromise) {
+    console.log("[Sync Service] Sincronização já em andamento, aguardando...");
+    return activeSyncPromise;
   }
 
-  console.log("[Sync Service] Sincronizando dados com football-data.org...");
-  
-  try {
-    const data = await fetchMatchesFromApi();
-    const syncedTime = new Date();
+  const performSync = async () => {
+    // 1. Check if we need to sync based on TTL
+    const latestMatch = await db.query.matches.findFirst({
+      orderBy: (matches, { desc }) => [desc(matches.lastSyncedAt)],
+    });
 
-    for (const apiMatch of data.matches) {
-      const matchId = apiMatch.id;
-      const status = apiMatch.status;
-      const homeScore = apiMatch.score.fullTime.home;
-      const awayScore = apiMatch.score.fullTime.away;
+    const now = new Date();
+    if (!force && latestMatch && now.getTime() - new Date(latestMatch.lastSyncedAt).getTime() < SYNC_TTL_MS) {
+      console.log("[Sync Service] Skipping sync, cache is still fresh.");
+      return;
+    }
 
-      const localMatch = await db.query.matches.findFirst({
-        where: eq(matches.id, matchId),
-      });
+    console.log("[Sync Service] Sincronizando dados com football-data.org...");
+    
+    try {
+      const data = await fetchMatchesFromApi();
+      const syncedTime = new Date();
 
-      if (localMatch && localMatch.status === "FINISHED" && (status === "TIMED" || status === "SCHEDULED")) {
-        console.log(`[Sync Service] Ignorando atualização da API para o jogo ${matchId} (${apiMatch.homeTeam.name} vs ${apiMatch.awayTeam.name}) pois já está FINISHED localmente.`);
-        continue;
-      }
+      for (const apiMatch of data.matches) {
+        const matchId = apiMatch.id;
+        const status = apiMatch.status;
+        const homeScore = apiMatch.score.fullTime.home;
+        const awayScore = apiMatch.score.fullTime.away;
 
-      // Upsert match
-      await db.insert(matches)
-        .values({
-          id: matchId,
-          stage: apiMatch.stage,
-          groupName: apiMatch.group,
-          homeTeamName: apiMatch.homeTeam.name || "A definir",
-          awayTeamName: apiMatch.awayTeam.name || "A definir",
-          homeTeamCrest: apiMatch.homeTeam.crest,
-          awayTeamCrest: apiMatch.awayTeam.crest,
-          utcDate: new Date(apiMatch.utcDate),
-          status: status,
-          homeScore: homeScore,
-          awayScore: awayScore,
-          lastSyncedAt: syncedTime,
-        })
-        .onConflictDoUpdate({
-          target: matches.id,
-          set: {
+        const localMatch = await db.query.matches.findFirst({
+          where: eq(matches.id, matchId),
+        });
+
+        if (localMatch && localMatch.status === "FINISHED" && (status === "TIMED" || status === "SCHEDULED")) {
+          console.log(`[Sync Service] Ignorando atualização da API para o jogo ${matchId} (${apiMatch.homeTeam.name} vs ${apiMatch.awayTeam.name}) pois já está FINISHED localmente.`);
+          continue;
+        }
+
+        // Upsert match
+        await db.insert(matches)
+          .values({
+            id: matchId,
             stage: apiMatch.stage,
             groupName: apiMatch.group,
             homeTeamName: apiMatch.homeTeam.name || "A definir",
@@ -69,41 +62,65 @@ export async function syncMatches(force = false): Promise<void> {
             homeScore: homeScore,
             awayScore: awayScore,
             lastSyncedAt: syncedTime,
-          },
-        });
+          })
+          .onConflictDoUpdate({
+            target: matches.id,
+            set: {
+              stage: apiMatch.stage,
+              groupName: apiMatch.group,
+              homeTeamName: apiMatch.homeTeam.name || "A definir",
+              awayTeamName: apiMatch.awayTeam.name || "A definir",
+              homeTeamCrest: apiMatch.homeTeam.crest,
+              awayTeamCrest: apiMatch.awayTeam.crest,
+              utcDate: new Date(apiMatch.utcDate),
+              status: status,
+              homeScore: homeScore,
+              awayScore: awayScore,
+              lastSyncedAt: syncedTime,
+            },
+          });
 
-      // If the match is finished, check if we need to award prediction points
-      if (status === "FINISHED" && homeScore !== null && awayScore !== null) {
-        // Find all predictions for this match (if force, recalculate everything; otherwise, only uncalculated ones)
-        const whereClause = force
-          ? eq(predictions.matchId, matchId)
-          : and(eq(predictions.matchId, matchId), isNull(predictions.pointsAwarded));
+        // If the match is finished, check if we need to award prediction points
+        if (status === "FINISHED" && homeScore !== null && awayScore !== null) {
+          // Find all predictions for this match (if force, recalculate everything; otherwise, only uncalculated ones)
+          const whereClause = force
+            ? eq(predictions.matchId, matchId)
+            : and(eq(predictions.matchId, matchId), isNull(predictions.pointsAwarded));
 
-        const uncalculatedPredictions = await db.select()
-          .from(predictions)
-          .where(whereClause);
+          const uncalculatedPredictions = await db.select()
+            .from(predictions)
+            .where(whereClause);
 
-        const isBrazilMatch = apiMatch.homeTeam.name === "Brazil" || apiMatch.awayTeam.name === "Brazil";
+          const isBrazilMatch = apiMatch.homeTeam.name === "Brazil" || apiMatch.awayTeam.name === "Brazil";
 
-        for (const pred of uncalculatedPredictions) {
-          let points = computePoints(pred.predictedHome, pred.predictedAway, homeScore, awayScore);
-          if (isBrazilMatch) {
-            points = points * 2;
+          for (const pred of uncalculatedPredictions) {
+            let points = computePoints(pred.predictedHome, pred.predictedAway, homeScore, awayScore);
+            if (isBrazilMatch) {
+              points = points * 2;
+            }
+            await db.update(predictions)
+              .set({
+                pointsAwarded: points,
+                updatedAt: new Date(),
+              })
+              .where(eq(predictions.id, pred.id));
           }
-          await db.update(predictions)
-            .set({
-              pointsAwarded: points,
-              updatedAt: new Date(),
-            })
-            .where(eq(predictions.id, pred.id));
         }
       }
+    } catch (error) {
+      console.error("[Sync Service] Erro na sincronização:", error);
+      // Graceful degradation: let app load from DB without erroring
+      if (!latestMatch) {
+        throw error; // If DB is empty, we must throw, otherwise we can fail silently
+      }
     }
-  } catch (error) {
-    console.error("[Sync Service] Erro na sincronização:", error);
-    // Graceful degradation: let app load from DB without erroring
-    if (!latestMatch) {
-      throw error; // If DB is empty, we must throw, otherwise we can fail silently
-    }
+  };
+
+  activeSyncPromise = performSync();
+
+  try {
+    await activeSyncPromise;
+  } finally {
+    activeSyncPromise = null;
   }
 }

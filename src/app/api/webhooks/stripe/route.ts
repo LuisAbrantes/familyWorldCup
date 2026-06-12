@@ -13,13 +13,15 @@ export async function POST(req: Request) {
 
   try {
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-    if (webhookSecret && sig) {
+    if (process.env.NODE_ENV === "production" || webhookSecret) {
+      if (!webhookSecret) {
+        return NextResponse.json({ error: "STRIPE_WEBHOOK_SECRET is not configured in production" }, { status: 500 });
+      }
+      if (!sig) {
+        return NextResponse.json({ error: "Missing stripe-signature header" }, { status: 400 });
+      }
       event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
     } else {
-      // If no secret is configured, bypass verification in non-production environments
-      if (process.env.NODE_ENV === "production") {
-        return NextResponse.json({ error: "Missing webhook secret in production" }, { status: 400 });
-      }
       console.warn("[Stripe Webhook] Bypassing signature verification in development mode.");
       event = JSON.parse(body);
     }
