@@ -26,11 +26,11 @@ test("fetchMatchesFromApi parses rate limit headers and fetches correctly", asyn
   
   const result = await fetchMatchesFromApi();
   expect(result.matches).toEqual(mockMatches);
-  expect(mockFetch).toHaveBeenCalledWith("https://api.football-data.org/v4/competitions/WC/matches?season=2026", expect.objectContaining({
+  expect(mockFetch).toHaveBeenCalledWith("https://api.football-data.org/v4/competitions/WC/matches?season=2026", {
     headers: {
       "X-Auth-Token": "test_key"
     }
-  }));
+  });
 });
 
 test("fetchMatchesFromApi throws error with reset time on 429 status", async () => {

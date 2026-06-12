@@ -12,11 +12,8 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Lazy sync in the background to ensure instant response time
-    const syncPromise = syncMatches();
-    if (syncPromise && typeof syncPromise.catch === "function") {
-      syncPromise.catch((err) => console.error("[Matches API] Background sync failed:", err));
-    }
+    // Lazy sync from API
+    await syncMatches();
 
     const url = req?.url || "http://localhost/api/matches";
     const { searchParams } = new URL(url);
